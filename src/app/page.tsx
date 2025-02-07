@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
+import MediaCapture from "@/components/MediaCapture";
 // import liff from "@line/liff";
 
 export default function App() {
@@ -68,10 +69,12 @@ export default function App() {
       </button>
 
       {/* Display user profile info */}
-      <section className="mt-8">
+      {/* <section className="mt-8">
         <h1 className="text-3xl font-bold">Welcome</h1>
         <p className="mt-2">Name: {user?.displayName}</p>
-      </section>
+      </section> */}
+
+      <MediaCapture />
     </section>
   );
 }
