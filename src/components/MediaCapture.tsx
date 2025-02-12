@@ -7,8 +7,6 @@ import '@tensorflow/tfjs';
 import html2canvas from 'html2canvas';
 
 const normalFrame = '/frame/KP_Layer_2-1.png';
-// const secretFrame = '/frame/KP_Layer_1-1.png';
-// const normalFrame = '/frame/KP_Layer_bg-1.png';
 const secretFrame = '/frame/KP_Layer_4-1.png';
 
 const MediaCapture = () => {
@@ -52,13 +50,9 @@ const MediaCapture = () => {
           segmentationThreshold: 0.7,
         });
         if (ctx) {
-          // // make bg on camera to white tranparent
-          // const mask = bodyPix.toMask(segmentation, { r: 0, g: 0, b: 0, a: 0 }, { r: 255, g: 255, b: 255, a: 255 });
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           // remove mask
           bodyPix.drawMask(canvas, video, null, 0.7, 0, false);
-          // // sent mask
-          // bodyPix.drawMask(canvas, video, mask, 0.7, 0, false);
         }
       }
     }
@@ -95,10 +89,6 @@ const MediaCapture = () => {
 
   // Handle photo capture
   const capturePhoto = () => {
-    // // capture from camera
-    // const imageSrc = webcamRef.current ? webcamRef.current.getScreenshot() : null;
-    // setCapturedMedia(imageSrc);
-
     // capture from preview
     const element = document.getElementById('preview'); // Replace with your target element's ID
     if (element) {
@@ -169,33 +159,11 @@ const MediaCapture = () => {
       mediaRecorder.stop();
       setIsRecording(false);
       setIsTakeMedia(false);
-    }, 3000); // Adjust time as needed
-
-    // if (webcamRef.current?.stream) {
-    //   mediaRecorderRef.current = new MediaRecorder(webcamRef.current.stream, {
-    //     mimeType: 'video/webm',
-    //   });
-    // }    
-    // if (mediaRecorderRef.current) {
-    //   mediaRecorderRef.current.ondataavailable = (event) => {
-    //     if (event.data.size > 0) {
-    //       setRecordedChunks((prev) => [...prev, event.data]);
-    //     }
-    //   };
-    //   mediaRecorderRef.current.start();
-    // }
+    }, 3000);
   };
 
   // Handle video recording stop
-  const stopRecording = () => {
-    
-
-    // if (mediaRecorderRef.current) {
-    //   mediaRecorderRef.current.stop();
-    //   setIsRecording(false);
-    //   setIsTakeMedia(false);
-    // }
-  };
+  const stopRecording = () => {};
 
   // Handle replay/retake
   const retakeMedia = () => {
@@ -217,16 +185,6 @@ const MediaCapture = () => {
         </video>
       );
     }
-    // } else if (mediaType === 'video' && recordedChunks.length > 0) {
-    //   const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-    //   const videoUrl = URL.createObjectURL(videoBlob);
-    //   return (
-    //     <video controls autoPlay>
-    //       <source src={videoUrl} type='video/webm' />
-    //       Your browser does not support the video tag.
-    //     </video>
-    //   );
-    // }
     return null;
   };
 
@@ -254,7 +212,7 @@ const MediaCapture = () => {
                     audio={false}
                     ref={webcamRef}
                     screenshotFormat='image/jpeg'
-                    width='100%'
+                    width='50%'
                     videoConstraints={{ facingMode: 'user' }}
                     style={{ position: 'absolute', top: 0, left: 0, opacity: 0 }} // Hide original video
                   />
