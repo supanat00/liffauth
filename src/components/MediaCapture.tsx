@@ -106,64 +106,64 @@ const MediaCapture = () => {
   };
 
   // Handle video recording start
-  const startRecording = async () => {
+  const startRecording = () => {
+    if (!webcamRef.current || !webcamRef.current.video) {
+      return;
+    }  
     setIsRecording(true);
-
-    const element = document.getElementById("preview");
-
-    if (!element) {
-      console.error("Element not found!");
-      return;
-    }
-
+    setIsTakeMedia(true);
+    const videoElement = webcamRef.current.video as HTMLVideoElement;  
+    // Create a hidden canvas for overlay
     const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-
+    const ctx = canvas.getContext("2d");  
     if (!ctx) {
-      console.error("Canvas context not available!");
+      setIsRecording(false);
       return;
-    }
-
-    canvas.width = element.clientWidth;
-    canvas.height = element.clientHeight;
-
-    const stream = canvas.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks: BlobPart[] = [];
-
+    }  
+    // Set canvas size to match webcam video
+    canvas.width = videoElement.videoWidth || 640;
+    canvas.height = videoElement.videoHeight || 480;  
+    // Load the frame PNG
+    const frame = new Image();
+    frame.src = frameType === "normal" ? normalFrame : secretFrame;  
+    // Capture frames at 30 FPS
+    const stream = canvas.captureStream(30); // Capture from canvas
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });  
+    let chunks: Blob[] = [];  
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         chunks.push(event.data);
       }
-    };
-
+    };  
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: "video/webm" });
       setVideoUrl(URL.createObjectURL(blob));
-    };
-
-    mediaRecorder.start();
-    setIsRecording(true);
-    mediaRecorderRef.current = mediaRecorder;
-
-    // Capture element as image every 100ms and draw on canvas
-    const captureInterval = setInterval(async () => {
-      const img = await html2canvas(element);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    }, 100);
-
-    // Stop recording after 10 seconds (optional)
-    setTimeout(() => {
-      clearInterval(captureInterval);
-      mediaRecorder.stop();
       setIsRecording(false);
       setIsTakeMedia(false);
-    }, 3000);
+    };  
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start();  
+    let recording = true;
+    const captureFrame = () => {
+      if (!recording) return;  
+      // Draw webcam video on canvas
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);  
+      // Draw PNG frame on top
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);  
+      requestAnimationFrame(captureFrame);
+    };  
+    frame.onload = () => {
+      requestAnimationFrame(captureFrame);
+    };
   };
-
-  // Handle video recording stop
-  const stopRecording = () => {};
+  
+  // Handle stop record video
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+      setIsTakeMedia(false);
+    }
+  };  
 
   // Handle replay/retake
   const retakeMedia = () => {
@@ -179,9 +179,8 @@ const MediaCapture = () => {
       return <img src={capturedMedia} alt='Captured' />;
     } else if(mediaType === 'video' && videoUrl) {
       return (
-        <video controls autoPlay loop>
-          <source src={videoUrl} type='video/webm' />
-          Your browser does not support the video tag.
+        <video controls autoPlay loop width="100%">
+          <source src={videoUrl} type="video/webm" />
         </video>
       );
     }
@@ -247,7 +246,7 @@ const MediaCapture = () => {
       ) : null}
 
       {/* Retake/Replay button */}
-      {(capturedMedia || recordedChunks.length > 0) && !isTakeMedia && (
+      {(capturedMedia || recordedChunks.length > 0 || videoUrl) && !isTakeMedia && (
         <button className='px-4 py-2 m-2 bg-yellow-500 text-white rounded' onClick={retakeMedia}>Retake</button>
       )}
     </div>
