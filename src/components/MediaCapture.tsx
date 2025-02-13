@@ -10,7 +10,7 @@ interface MediaCaptureProps {
 }
 
 // Preload PNG Frames (3:4 Aspect Ratio)
-const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/spacial${String(i).padStart(4, '0')}.png`);
+const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/standard${String(i).padStart(4, '0')}.png`);
 const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
 
 const loadedFrames: HTMLImageElement[] = [];
