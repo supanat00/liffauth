@@ -7,7 +7,7 @@ import '@tensorflow/tfjs';
 
 // ✅ Preload PNG Frames (3:4 Aspect Ratio)
 const framePaths = Array.from({ length: 30 }, (_, i) =>
-  `/frame/png-seq/secret/spacial${String(i).padStart(4, '0')}.png`
+  `/frame/png-seq/secret/secret layer 1${String(i).padStart(4, '0')}.png`
 );
 const loadedFrames: HTMLImageElement[] = [];
 
@@ -28,8 +28,8 @@ const MediaCapture = () => {
   const frameHeight = 800;
 
   // ✅ Reduce Camera Preview to Fit Inside PNG Frame
-  const cameraWidth = 400;  // Smaller than frameWidth
-  const cameraHeight = 600; // Maintain 3:4 ratio
+  const cameraWidth = 450;  // Smaller than frameWidth
+  const cameraHeight = 800; // Maintain 3:4 ratio
 
   useEffect(() => {
     setIsLoading(true);
