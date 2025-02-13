@@ -5,13 +5,17 @@ import Webcam from 'react-webcam';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 
-// ✅ Preload PNG Frames (3:4 Aspect Ratio)
-const framePaths = Array.from({ length: 30 }, (_, i) =>
-  `/frame/png-seq/secret/secret layer 1${String(i).padStart(4, '0')}.png`
-);
+interface MediaCaptureProps {
+  isSecret: boolean; // Define type for isSecret
+}
+
+// Preload PNG Frames (3:4 Aspect Ratio)
+const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/spacial${String(i).padStart(4, '0')}.png`);
+const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
+
 const loadedFrames: HTMLImageElement[] = [];
 
-const MediaCapture = () => {
+const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -20,45 +24,40 @@ const MediaCapture = () => {
   const [frameIndex, setFrameIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [mediaType, setMediaType] = useState('photo'); // 'photo' or 'video'
 
-  // ✅ Set PNG Frame Size (3:4 Aspect Ratio)
-  const frameWidth = 450;
-  const frameHeight = 800;
+  // Set PNG Frame Size (3:4 Aspect Ratio)
+  const frameWidth = 350;
+  const frameHeight = 600;
 
-  // ✅ Reduce Camera Preview to Fit Inside PNG Frame
-  const cameraWidth = 450;  // Smaller than frameWidth
-  const cameraHeight = 800; // Maintain 3:4 ratio
+  // Reduce Camera Preview to Fit Inside PNG Frame
+  const cameraWidth = 350;  // Smaller than frameWidth
+  const cameraHeight = 600; // Maintain 3:4 ratio
 
   useEffect(() => {
-    setIsLoading(true);
-
-    // ✅ Preload all frames into memory
+    // Preload all frames into memory
     let loadedCount = 0;
-    framePaths.forEach((src, i) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        loadedFrames[i] = img;
-        loadedCount++;
-        if (loadedCount === framePaths.length) {
-          setIsLoading(false);
-        }
-      };
-    });
+    // if(framePaths) {
+      (isSecret ? frameSecret : frameNormal).forEach((src, i) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          loadedFrames[i] = img;
+          loadedCount++;
+        };
+      });
+    // }
   }, []);
 
-  // ✅ Cycle through PNG frames at correct speed
+  // Cycle through PNG frames at correct speed
   useEffect(() => {
     const frameInterval = setInterval(() => {
-      setFrameIndex((prevIndex) => (prevIndex + 1) % framePaths.length);
+      setFrameIndex((prevIndex) => (prevIndex + 1) % ((isSecret ? frameSecret : frameNormal) ? (isSecret ? frameSecret : frameNormal).length : 1));
     }, 100);
 
     return () => clearInterval(frameInterval);
   }, []);
 
-  // ✅ Update Canvas: Keep PNG Full Size, Reduce Camera Preview
+  // Update Canvas: Keep PNG Full Size, Reduce Camera Preview
   const updateCanvas = () => {
     if (!webcamRef.current || !canvasRef.current) return;
 
@@ -67,19 +66,19 @@ const MediaCapture = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx || video.readyState !== 4) return;
 
-    // ✅ Set Canvas Size to Match PNG Frame
+    // Set Canvas Size to Match PNG Frame
     canvas.width = frameWidth;
     canvas.height = frameHeight;
 
-    // ✅ Clear Canvas
+    // Clear Canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // ✅ Draw Webcam Preview Smaller Than PNG Frame
+    // Draw Webcam Preview Smaller Than PNG Frame
     const camX = (canvas.width - cameraWidth) / 2;
     const camY = (canvas.height - cameraHeight) / 2;
     ctx.drawImage(video, camX, camY, cameraWidth, cameraHeight);
 
-    // ✅ Draw PNG Frame Without Stretching (Centered)
+    // Draw PNG Frame Without Stretching (Centered)
     if (loadedFrames[frameIndex]) {
       ctx.drawImage(loadedFrames[frameIndex], 0, 0, canvas.width, canvas.height);
     }
@@ -90,7 +89,7 @@ const MediaCapture = () => {
     return () => clearInterval(interval);
   }, [frameIndex]);
 
-  // ✅ Capture Photo with Correct Camera & Frame Size
+  // Capture Photo with Correct Camera & Frame Size
   const capturePhoto = () => {
     if (!canvasRef.current) return;
 
@@ -112,7 +111,7 @@ const MediaCapture = () => {
     }, 50);
   };
 
-  // ✅ Start Video Recording (Includes PNG Overlay)
+  // Start Video Recording (Includes PNG Overlay)
   const startRecording = () => {
     if (!canvasRef.current) return;
 
@@ -138,7 +137,7 @@ const MediaCapture = () => {
     mediaRecorder.start();
   };
 
-  // ✅ Stop Video Recording
+  // Stop Video Recording
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
@@ -146,7 +145,7 @@ const MediaCapture = () => {
     }
   };
 
-  // ✅ Retake Media
+  // Retake Media
   const retakeMedia = () => {
     setCapturedMedia(null);
     setVideoUrl(null);
@@ -155,64 +154,52 @@ const MediaCapture = () => {
 
   return (
     <div>
-      <h1>Random Frame App</h1>
-      <div style={{ marginBottom: '50px' }}>
-        {isTakeMedia ? (
-        <div>
-          {isLoading ? (
-            <p className='text-lg font-semibold'>Loading frames...</p>
-          ) : (
-          <div>
-            <div style={{
-                position: 'relative',
-                width: `${frameWidth}px`,
-                height: `${frameHeight}px`,
-                border: '10px solid',
-                padding: '10px',
-                margin: '10px',
-              }}>
-              <Webcam
-                audio={false}
-                ref={webcamRef}
-                screenshotFormat='image/jpeg'
-                videoConstraints={{
-                  width: cameraWidth,
-                  height: cameraHeight,
-                  aspectRatio: 3 / 4,
-                  facingMode: 'user',
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  width: `${cameraWidth}px`,
-                  height: `${cameraHeight}px`,
-                  transform: 'translate(-50%, -50%)', // Center it within the frame
-                  objectFit: 'cover',
-                  opacity: 0, // Hide original video
-                }}
-              />
-              <canvas id='preview' ref={canvasRef} style={{
-                  width: '100%',
-                  height: '100%',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }} />
-            </div>
-          </div>
-          )}
-        </div>) : (
+      <div style={{ marginTop: '50px' }}>
+        {isTakeMedia ? (<div style={{
+          position: 'relative',
+          width: `${frameWidth}px`,
+          height: `${frameHeight}px`
+        }}>
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat='image/jpeg'
+            videoConstraints={{
+              width: cameraWidth,
+              height: cameraHeight,
+              aspectRatio: 3 / 4,
+              facingMode: 'user',
+            }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: `${cameraWidth}px`,
+              height: `${cameraHeight}px`,
+              transform: 'translate(-50%, -50%)', // Center it within the frame
+              objectFit: 'cover',
+              opacity: 0, // Hide original video
+            }}
+          />
+          <canvas id='preview' ref={canvasRef} style={{
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          }} />
+        </div>) : null }
+        
         <div>
           {videoUrl ? (
             <video controls autoPlay loop width="100%">
               <source src={videoUrl} type="video/webm" />
             </video>
-          ) : (
+          ) : null}
+          {capturedMedia ? (
             <img src={capturedMedia || ''} alt='Captured' />
-          )}
+          ) : null}
         </div>
-        )}
       </div>
 
       {/* Capture controls */}

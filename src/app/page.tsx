@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
-import MediaCapture from "@/components/MediaCapture";
+import Random from "@/components/Random";
 // import liff from "@line/liff";
 
 export default function App() {
@@ -59,7 +59,7 @@ export default function App() {
   // }
 
   return (
-    <section className="relative flex flex-col items-center justify-center bg-backgroundImg bg-repeat bg-cover bg-bottom w-full h-screen p-4">
+    <section className="relative flex flex-col items-center justify-center bg-backgroundImg">
       {/* Logout button at top-right */}
       {/* <button
         onClick={handleLogout}
@@ -74,7 +74,7 @@ export default function App() {
         <p className="mt-2">Name: {user?.displayName}</p>
       </section> */}
 
-      <MediaCapture />
+      <Random />
 
     </section>
   );
