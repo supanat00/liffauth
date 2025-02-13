@@ -5,224 +5,142 @@ import Webcam from 'react-webcam';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 
-const normalFrame = '/frame/khunpol-layer-1.gif'; // Normal GIF frame
-const secretFrame = '/frame/khunpol-layer-1.gif'; // Secret GIF frame
-
-const BACKGROUND_COLOR = '#2D2D2D'; // Solid background color
+// ✅ Preload PNG Frames (3:4 Aspect Ratio)
+const framePaths = Array.from({ length: 30 }, (_, i) =>
+  `/frame/png-seq/secret/spacial${String(i).padStart(4, '0')}.png`
+);
+const loadedFrames: HTMLImageElement[] = [];
 
 const MediaCapture = () => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const frameImgRef = useRef<HTMLImageElement | null>(null);
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
-  const [frameType, setFrameType] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState('photo'); // 'photo' or 'video'
+  const [frameIndex, setFrameIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mediaType, setMediaType] = useState('photo'); // 'photo' or 'video'
+
+  // ✅ Set PNG Frame Size (3:4 Aspect Ratio)
+  const frameWidth = 450;
+  const frameHeight = 800;
+
+  // ✅ Reduce Camera Preview to Fit Inside PNG Frame
+  const cameraWidth = 400;  // Smaller than frameWidth
+  const cameraHeight = 600; // Maintain 3:4 ratio
 
   useEffect(() => {
-    console.log("Setting frame type...");
-    setFrameType(Math.random() < 0.7 ? 'normal' : 'secret');
+    setIsLoading(true);
+
+    // ✅ Preload all frames into memory
+    let loadedCount = 0;
+    framePaths.forEach((src, i) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        loadedFrames[i] = img;
+        loadedCount++;
+        if (loadedCount === framePaths.length) {
+          setIsLoading(false);
+        }
+      };
+    });
   }, []);
 
+  // ✅ Cycle through PNG frames at correct speed
   useEffect(() => {
-    console.log("Loading BodyPix model...");
-    const loadModel = async () => {
-      const model = await bodyPix.load();
-      setBodyPixModel(model);
-      console.log("BodyPix model loaded!");
-    };
-    loadModel();
+    const frameInterval = setInterval(() => {
+      setFrameIndex((prevIndex) => (prevIndex + 1) % framePaths.length);
+    }, 100);
+
+    return () => clearInterval(frameInterval);
   }, []);
 
-  // ✅ Load GIF Image Correctly
-  useEffect(() => {
-    console.log("Loading GIF image...");
-    frameImgRef.current = new Image();
-    frameImgRef.current.src = frameType === 'normal' ? normalFrame : secretFrame;
-    frameImgRef.current.onload = () => {
-      setIsLoaded(true);
-      console.log("GIF Loaded:", frameImgRef.current?.src);
-    };
-  }, [frameType]);
-
-  // ✅ Process Camera Frame & Remove Background
-  const processFrame = async () => {
-    if (!bodyPixModel || !webcamRef.current || !canvasRef.current) {
-      requestAnimationFrame(processFrame);
-      return;
-    }
+  // ✅ Update Canvas: Keep PNG Full Size, Reduce Camera Preview
+  const updateCanvas = () => {
+    if (!webcamRef.current || !canvasRef.current) return;
 
     const video = webcamRef.current.video as HTMLVideoElement;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    if (!ctx || video.readyState !== 4) return;
 
-    if (!ctx || video.readyState !== 4) {
-      requestAnimationFrame(processFrame);
-      return;
-    }
+    // ✅ Set Canvas Size to Match PNG Frame
+    canvas.width = frameWidth;
+    canvas.height = frameHeight;
 
-    console.log("Processing frame...");
-
-    // ✅ Set canvas size to match video
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-    }
-
-    // ✅ Get segmentation from BodyPix
-    const segmentation = await bodyPixModel.segmentPerson(video, {
-      internalResolution: 'medium',
-      segmentationThreshold: 0.7,
-    });
-
-    // ✅ Create a mask with transparency for background
-    const mask = bodyPix.toMask(segmentation, { r: 0, g: 0, b: 0, a: 0 }, { r: 255, g: 255, b: 255, a: 255 });
-
-    // ✅ Clear canvas & draw solid background
+    // ✅ Clear Canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = BACKGROUND_COLOR;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // ✅ Draw the webcam video with the segmented person
-    bodyPix.drawMask(canvas, video, mask, 1, 0, false);
+    // ✅ Draw Webcam Preview Smaller Than PNG Frame
+    const camX = (canvas.width - cameraWidth) / 2;
+    const camY = (canvas.height - cameraHeight) / 2;
+    ctx.drawImage(video, camX, camY, cameraWidth, cameraHeight);
 
-    requestAnimationFrame(processFrame);
+    // ✅ Draw PNG Frame Without Stretching (Centered)
+    if (loadedFrames[frameIndex]) {
+      ctx.drawImage(loadedFrames[frameIndex], 0, 0, canvas.width, canvas.height);
+    }
   };
 
   useEffect(() => {
-    if (bodyPixModel) {
-      console.log("Starting processFrame...");
-      requestAnimationFrame(processFrame);
-    }
-  }, [bodyPixModel]);
+    const interval = setInterval(updateCanvas, 33);
+    return () => clearInterval(interval);
+  }, [frameIndex]);
 
+  // ✅ Capture Photo with Correct Camera & Frame Size
   const capturePhoto = () => {
-    // ✅ Ensure canvas and GIF frame exist before capturing
-    if (!canvasRef.current) {
-      console.warn("Canvas reference is null!");
-      return;
-    }
-    if (!frameImgRef.current) {
-      console.warn("GIF frame reference is null!");
-      return;
-    }
-  
-    // ✅ Create a new temporary canvas for capturing the snapshot
+    if (!canvasRef.current) return;
+
     const tempCanvas = document.createElement("canvas");
     const tempCtx = tempCanvas.getContext("2d");
-  
-    if (!tempCtx) {
-      console.warn("Canvas context is null!");
-      return;
-    }
-  
-    // ✅ Match the size of the preview canvas
-    tempCanvas.width = canvasRef.current.width;
-    tempCanvas.height = canvasRef.current.height;
-  
-    // ✅ Ensure the GIF is fully drawn before capturing
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!canvasRef.current || !frameImgRef.current) {
-          console.warn("Canvas or GIF frame became null before capture!");
-          return;
-        }
-  
-        // ✅ Capture the current processed webcam feed (segmented person)
-        tempCtx.drawImage(canvasRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
-  
-        // ✅ Overlay the animated GIF frame on the snapshot
-        tempCtx.drawImage(frameImgRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
-  
-        // ✅ Convert the new canvas to a PNG image
-        const imageSrc = tempCanvas.toDataURL("image/png");
-  
-        // ✅ Save the captured photo with the frame at the exact displayed moment
-        setCapturedMedia(imageSrc);
-        setIsTakeMedia(false);
-      });
-    });
-  };  
+    if (!tempCtx) return;
 
-  // ✅ Start Video Recording
+    tempCanvas.width = frameWidth;
+    tempCanvas.height = frameHeight;
+
+    setTimeout(() => {
+      if (!canvasRef.current) return;
+
+      tempCtx.drawImage(canvasRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
+
+      const imageSrc = tempCanvas.toDataURL("image/png");
+      setCapturedMedia(imageSrc);
+      setIsTakeMedia(false);
+    }, 50);
+  };
+
+  // ✅ Start Video Recording (Includes PNG Overlay)
   const startRecording = () => {
-    if (!canvasRef.current || !frameImgRef.current || !webcamRef.current) {
-      console.warn("Canvas, GIF frame, or webcam reference is null! Cannot start recording.");
-      return;
-    }
-  
+    if (!canvasRef.current) return;
+
     setIsRecording(true);
     setIsTakeMedia(true);
-  
-    // ✅ Create an offscreen recording canvas
-    const recordCanvas = document.createElement("canvas");
-    const recordCtx = recordCanvas.getContext("2d");
-  
-    if (!recordCtx) {
-      console.warn("Failed to create recording canvas context.");
-      return;
-    }
-  
-    // ✅ Set the size of the recording canvas to match the webcam feed
-    recordCanvas.width = canvasRef.current.width;
-    recordCanvas.height = canvasRef.current.height;
-  
-    // ✅ Capture stream from the recording canvas
-    const stream = recordCanvas.captureStream(30); // 30 FPS
+
+    const stream = canvasRef.current.captureStream(30);
     const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
     let chunks: Blob[] = [];
-  
+
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) chunks.push(event.data);
     };
-  
+
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: "video/webm" });
       setVideoUrl(URL.createObjectURL(blob));
       setIsRecording(false);
       setIsTakeMedia(false);
     };
-  
+
     mediaRecorderRef.current = mediaRecorder;
     mediaRecorder.start();
-  
-    // ✅ Continuously draw the segmented webcam feed and GIF on the recording canvas
-    const drawFrame = () => {
-      if (!canvasRef.current || !frameImgRef.current || !isRecording) return;
-  
-      const video = webcamRef.current?.video;
-      if (!video || video.readyState !== 4) return;
-  
-      // ✅ Clear the recording canvas
-      recordCtx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
-  
-      // ✅ Draw a solid background
-      recordCtx.fillStyle = "#2D2D2D"; // Background color
-      recordCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
-  
-      // ✅ Draw the segmented person from the preview canvas
-      recordCtx.drawImage(canvasRef.current, 0, 0, recordCanvas.width, recordCanvas.height);
-  
-      // ✅ Draw the animated GIF overlay
-      recordCtx.drawImage(frameImgRef.current, 0, 0, recordCanvas.width, recordCanvas.height);
-  
-      // ✅ Continue drawing frames until recording stops
-      if (isRecording) {
-        requestAnimationFrame(drawFrame);
-      }
-    };
-  
-    requestAnimationFrame(drawFrame);
-  };  
+  };
 
-  // ✅ Stop Recording
+  // ✅ Stop Video Recording
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsTakeMedia(false);
     }
@@ -237,89 +155,79 @@ const MediaCapture = () => {
 
   return (
     <div>
-      <h1>Background Removal Debugging</h1>
-
-      <div style={{ position: "relative", width: "100%", maxWidth: "640px", height: "480px", marginBottom: '50px' }}>
-        <p>Selected Frame: {frameType}</p>
-
-        {isTakeMedia ? <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          {/* Webcam */}
-          <Webcam
-            audio={false}
-            ref={webcamRef}
-            screenshotFormat='image/jpeg'
-            videoConstraints={{ facingMode: 'user' }}
-            style={{ position: 'absolute', top: 0, left: 0, width: "100%", height: "100%", opacity: 1 }}
-          />
-
-          {/* Canvas */}
-          <canvas id='preview' ref={canvasRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "transparent" }} />
-
-          {/* ✅ Animated GIF Overlay (Fixes GIF Not Animating) */}
-          {isLoaded && (
-            <img
-              src={frameType === 'normal' ? normalFrame : secretFrame}
-              alt="Animated Frame"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none", // Prevents blocking interactions
-              }}
-            />
+      <h1>Random Frame App</h1>
+      <div style={{ marginBottom: '50px' }}>
+        {isTakeMedia ? (
+        <div>
+          {isLoading ? (
+            <p className='text-lg font-semibold'>Loading frames...</p>
+          ) : (
+          <div>
+            <div style={{
+                position: 'relative',
+                width: `${frameWidth}px`,
+                height: `${frameHeight}px`,
+                border: '10px solid',
+                padding: '10px',
+                margin: '10px',
+              }}>
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat='image/jpeg'
+                videoConstraints={{
+                  width: cameraWidth,
+                  height: cameraHeight,
+                  aspectRatio: 3 / 4,
+                  facingMode: 'user',
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: `${cameraWidth}px`,
+                  height: `${cameraHeight}px`,
+                  transform: 'translate(-50%, -50%)', // Center it within the frame
+                  objectFit: 'cover',
+                  opacity: 0, // Hide original video
+                }}
+              />
+              <canvas id='preview' ref={canvasRef} style={{
+                  width: '100%',
+                  height: '100%',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }} />
+            </div>
+          </div>
           )}
-        </div> :
+        </div>) : (
         <div>
           {videoUrl ? (
             <video controls autoPlay loop width="100%">
               <source src={videoUrl} type="video/webm" />
             </video>
           ) : (
-            capturedMedia && <img src={capturedMedia} alt='Captured'
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none"
-            }} />
+            <img src={capturedMedia || ''} alt='Captured' />
           )}
         </div>
-        }
+        )}
       </div>
 
       {/* Capture controls */}
       {isTakeMedia && (
         <div>
-          <button className='px-4 py-2 m-2 bg-green-500 text-white rounded' onClick={() => setMediaType('photo')}>
-            Take Photo
-          </button>
-          <button className='px-4 py-2 m-2 bg-blue-500 text-white rounded' onClick={() => setMediaType('video')}>
-            Record Video
+          <button className='px-4 py-2 m-2 bg-green-500 text-white rounded' onClick={capturePhoto}>Take Photo</button>
+          <button className='px-4 py-2 m-2 bg-blue-500 text-white rounded' onClick={isRecording ? stopRecording : startRecording}>
+            {isRecording ? 'Stop Recording' : 'Record Video'}
           </button>
         </div>
       )}
 
-      {/* Capture/Record button */}
-      {mediaType === 'photo' && isTakeMedia && (
-        <button className='px-4 py-2 m-2 bg-orange-500 text-white rounded' onClick={capturePhoto}>
-          Capture Photo
-        </button>
-      )}
-      {mediaType === 'video' && isTakeMedia && (
-        <button className='px-4 py-2 m-2 bg-red-500 text-white rounded' onClick={isRecording ? stopRecording : startRecording}>
-          {isRecording ? 'Stop Recording' : 'Start Recording'}
-        </button>
-      )}
-
       {/* Retake button */}
       {(capturedMedia || videoUrl) && !isTakeMedia && (
-        <button className='px-4 py-2 m-2 bg-yellow-500 text-white rounded' onClick={retakeMedia}>
-          Retake
-        </button>
+        <button className='px-4 py-2 m-2 bg-yellow-500 text-white rounded' onClick={retakeMedia}>Retake</button>
       )}
     </div>
   );

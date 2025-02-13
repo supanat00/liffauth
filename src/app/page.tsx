@@ -10,63 +10,63 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { user, setUser } = useUser();
 
-  // Initialize LIFF
-  useEffect(() => {
-    const loadLiff = async () => {
-      const liffModule = await import("@line/liff");
-      const liffInstance = liffModule.default;
-      try {
-        if (!liffId) {
-          throw new Error("LIFF ID is missing");
-        }
-        await liffInstance.init({ liffId });
+  // // Initialize LIFF
+  // useEffect(() => {
+  //   const loadLiff = async () => {
+  //     const liffModule = await import("@line/liff");
+  //     const liffInstance = liffModule.default;
+  //     try {
+  //       if (!liffId) {
+  //         throw new Error("LIFF ID is missing");
+  //       }
+  //       await liffInstance.init({ liffId });
 
-        if (liffInstance.isLoggedIn()) {
-          setIsLoggedIn(true);
-          const profile = await liffInstance.getProfile();
-          console.log(profile, profile.userId);
-          setUser({ displayName: profile.displayName, userId: profile.userId });
-        } else {
-          liffInstance.login();
-        }
-      } catch (error) {
-        console.error(
-          "LIFF initialization error:",
-          error instanceof Error ? error.message : error
-        );
-      }
-    };
+  //       if (liffInstance.isLoggedIn()) {
+  //         setIsLoggedIn(true);
+  //         const profile = await liffInstance.getProfile();
+  //         console.log(profile, profile.userId);
+  //         setUser({ displayName: profile.displayName, userId: profile.userId });
+  //       } else {
+  //         liffInstance.login();
+  //       }
+  //     } catch (error) {
+  //       console.error(
+  //         "LIFF initialization error:",
+  //         error instanceof Error ? error.message : error
+  //       );
+  //     }
+  //   };
 
-    loadLiff();
-  }, [liffId, setUser]);
+  //   loadLiff();
+  // }, [liffId, setUser]);
 
-  // Logout handler
-  const handleLogout = async () => {
-    const liffModule = await import("@line/liff");
-    liffModule.default.logout();
-    setIsLoggedIn(false);
+  // // Logout handler
+  // const handleLogout = async () => {
+  //   const liffModule = await import("@line/liff");
+  //   liffModule.default.logout();
+  //   setIsLoggedIn(false);
 
-    // Optionally reload the page after logout
-    window.location.reload();
-  };
+  //   // Optionally reload the page after logout
+  //   window.location.reload();
+  // };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="flex justify-center items-center w-full h-screen">
-        <p>กำลังเข้าสู่ระบบ...</p>
-      </div>
-    );
-  }
+  // if (!isLoggedIn) {
+  //   return (
+  //     <div className="flex justify-center items-center w-full h-screen">
+  //       <p>กำลังเข้าสู่ระบบ...</p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <section className="relative flex flex-col items-center justify-center bg-backgroundImg bg-repeat bg-cover bg-bottom w-full h-screen p-4">
       {/* Logout button at top-right */}
-      <button
+      {/* <button
         onClick={handleLogout}
         className="absolute top-4 right-4 z-[10000] px-4 py-2 text-xl font-bold text-white bg-red-600 rounded"
       >
         Logout
-      </button>
+      </button> */}
 
       {/* Display user profile info */}
       {/* <section className="mt-8">
@@ -75,6 +75,7 @@ export default function App() {
       </section> */}
 
       <MediaCapture />
+
     </section>
   );
 }
