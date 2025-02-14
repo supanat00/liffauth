@@ -6,9 +6,11 @@ import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 import Icon from '@/components/Icon';
 import Toggle from './Toggle';
+import UploadToS3 from './UploadToS3';
 
 interface MediaCaptureProps {
-  isSecret: boolean; // Define type for isSecret
+  isSecret: boolean;
+  artistName: string;
 }
 
 // Preload PNG Frames (3:4 Aspect Ratio)
@@ -17,7 +19,7 @@ const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/
 
 const loadedFrames: HTMLImageElement[] = [];
 
-const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
+const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -27,6 +29,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
   const [type, setType] = useState<string | null>(null);
+  const [fileUpload, setFileUpload] = useState<File | null>(null);
 
   const handleTypeEmit = (value: boolean) => {
     setType(!value ? 'video' : 'photo');
@@ -112,9 +115,21 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
 
       tempCtx.drawImage(canvasRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
 
-      const imageSrc = tempCanvas.toDataURL('image/png');
-      setCapturedMedia(imageSrc);
-      setIsTakeMedia(false);
+      // Convert canvas to Blob
+      tempCanvas.toBlob((blob) => {
+        if (!blob) return;
+        // Create a file from the Blob
+        const file = new File([blob], `${artistName}-image.png`, { type: 'image/png' });
+        setFileUpload(file);
+        // Create a URL for the Blob and trigger the download
+        const url = URL.createObjectURL(file);
+        // Cleanup Blob URL
+        URL.revokeObjectURL(url);
+
+        const imageSrc = tempCanvas.toDataURL('image/png');
+        setCapturedMedia(imageSrc);
+        setIsTakeMedia(false);
+      }, 'image/png');
     }, 50);
   };
 
@@ -138,6 +153,10 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       setVideoUrl(URL.createObjectURL(blob));
       setIsRecording(false);
       setIsTakeMedia(false);
+
+      // Convert Blob to File for upload
+      const fileUpload = new File([blob], `${artistName}-video.webm`, { type: 'video/webm' });
+      setFileUpload(fileUpload);
     };
 
     mediaRecorderRef.current = mediaRecorder;
@@ -245,12 +264,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
                 <Icon type='retake' />
               </button>
               <p className='text-xs'>Retake</p>
-              <button
-              className='w-12 h-12 mt-4 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-              >
-                <Icon type='save' />
-              </button>
-              <p className='text-xs'>Save & Share</p>
+              <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
             </>
           )}
         </div>

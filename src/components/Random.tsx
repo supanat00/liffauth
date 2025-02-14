@@ -7,13 +7,14 @@ import MediaCapture from './MediaCapture';
 const normalFrames = Array.from({ length: 75 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
 const secretFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
 const congratsFrames = Array.from({ length: 28 }, (_, i) => `/frame/png-seq/congrat-secret/Comp 4_${String(i).padStart(5, '0')}.png`);
+const artistName = 'Khunpol';
 
 const Random = () => {
   const [frames, setFrames] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
   const [showMediaCapture, setShowMediaCapture] = useState(false);
-  const [isSecret, setIsSecret] = useState(false);
+  const [isSecret, setIsSecret] = useState(true);
 
   useEffect(() => {
     // Randomly choose normal (70%) or secret (30%)
@@ -57,7 +58,7 @@ const Random = () => {
         height={400} 
       />: null} */}
       {/* {showMediaCapture && <MediaCapture isSecret={isSecret} />} */}
-      <MediaCapture isSecret={false} />
+      <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />
     </div>
   );
 }
