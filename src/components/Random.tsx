@@ -48,14 +48,14 @@ const Random = () => {
   
   return (
     <div className='flex justify-center items-center h-screen'>
-      {frames[currentIndex] && !showMediaCapture ?
-      <Image 
+      {frames[currentIndex] && !showMediaCapture &&
+      (<Image 
         src={frames[currentIndex]} 
         alt='Animation Frame' 
         width={400}
         height={400}
         priority
-      />: null}
+      />)}
       {showMediaCapture && <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />}
     </div>
   );

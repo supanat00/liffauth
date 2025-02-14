@@ -193,7 +193,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   return (
     <div>
       <div style={{ marginTop: '50px' }}>
-        {isTakeMedia ? (<div style={{
+        {isTakeMedia && (<div style={{
           position: 'relative',
           width: `${frameWidth}px`,
           height: `${frameHeight}px`
@@ -226,17 +226,17 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
             top: 0,
             left: 0,
           }} />
-        </div>) : null }
+        </div>)}
         
         <div>
-          {videoUrl ? (
+          {videoUrl && (
             <video controls autoPlay loop width='100%'>
               <source src={videoUrl} type='video/webm' />
             </video>
-          ) : null}
-          {capturedMedia ? (
+          )}
+          {capturedMedia && (
             <img src={capturedMedia || ''} alt='Captured' />
-          ) : null}
+          )}
         </div>
       </div>
       
