@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import MediaCapture from './MediaCapture';
 
-const normalFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
-const secretFrames = Array.from({ length: 73 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
-const congratsFrames = Array.from({ length: 27 }, (_, i) => `/frame/png-seq/congrat-secret/Comp 4_${String(i).padStart(5, '0')}.png`);
+const normalFrames = Array.from({ length: 75 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
+const secretFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
+const congratsFrames = Array.from({ length: 28 }, (_, i) => `/frame/png-seq/congrat-secret/Comp 4_${String(i).padStart(5, '0')}.png`);
 
-export default function PngSequence() {
+const Random = () => {
   const [frames, setFrames] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
@@ -48,15 +48,18 @@ export default function PngSequence() {
   }, [frames]);
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      {frames && !showMediaCapture ?
+    <div className='flex justify-center items-center h-screen'>
+      {/* {frames && !showMediaCapture ?
       <Image 
         src={frames[currentIndex]} 
-        alt="Animation Frame" 
+        alt='Animation Frame' 
         width={400} 
         height={400} 
-      />: null}
-      {showMediaCapture && <MediaCapture isSecret={isSecret} />}
+      />: null} */}
+      {/* {showMediaCapture && <MediaCapture isSecret={isSecret} />} */}
+      <MediaCapture isSecret={false} />
     </div>
   );
 }
+
+export default Random;

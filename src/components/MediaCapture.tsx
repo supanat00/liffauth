@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
+import Icon from '@/components/Icon';
+import Toggle from './Toggle';
 
 interface MediaCaptureProps {
   isSecret: boolean; // Define type for isSecret
@@ -15,7 +17,7 @@ const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/
 
 const loadedFrames: HTMLImageElement[] = [];
 
-const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
+const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -24,6 +26,11 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [frameIndex, setFrameIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
+  const [type, setType] = useState<string | null>(null);
+
+  const handleTypeEmit = (value: boolean) => {
+    setType(!value ? 'video' : 'photo');
+  };
 
   // Set PNG Frame Size (3:4 Aspect Ratio)
   const frameWidth = 350;
@@ -93,8 +100,8 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const capturePhoto = () => {
     if (!canvasRef.current) return;
 
-    const tempCanvas = document.createElement("canvas");
-    const tempCtx = tempCanvas.getContext("2d");
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
 
     tempCanvas.width = frameWidth;
@@ -105,7 +112,7 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
 
       tempCtx.drawImage(canvasRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
 
-      const imageSrc = tempCanvas.toDataURL("image/png");
+      const imageSrc = tempCanvas.toDataURL('image/png');
       setCapturedMedia(imageSrc);
       setIsTakeMedia(false);
     }, 50);
@@ -119,7 +126,7 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setIsTakeMedia(true);
 
     const stream = canvasRef.current.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
     let chunks: Blob[] = [];
 
     mediaRecorder.ondataavailable = (event) => {
@@ -127,7 +134,7 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
     };
 
     mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
+      const blob = new Blob(chunks, { type: 'video/webm' });
       setVideoUrl(URL.createObjectURL(blob));
       setIsRecording(false);
       setIsTakeMedia(false);
@@ -150,6 +157,18 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setCapturedMedia(null);
     setVideoUrl(null);
     setIsTakeMedia(true);
+  };
+
+  const handleTypeClick = () => {
+    if (type === 'photo' || type === null) {
+      capturePhoto();
+    } else {
+      if(isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
   };
 
   return (
@@ -192,8 +211,8 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
         
         <div>
           {videoUrl ? (
-            <video controls autoPlay loop width="100%">
-              <source src={videoUrl} type="video/webm" />
+            <video controls autoPlay loop width='100%'>
+              <source src={videoUrl} type='video/webm' />
             </video>
           ) : null}
           {capturedMedia ? (
@@ -201,21 +220,55 @@ const MediaCapture : React.FC<MediaCaptureProps> = ({ isSecret }) => {
           ) : null}
         </div>
       </div>
-
-      {/* Capture controls */}
-      {isTakeMedia && (
-        <div>
-          <button className='px-4 py-2 m-2 bg-green-500 text-white rounded' onClick={capturePhoto}>Take Photo</button>
-          <button className='px-4 py-2 m-2 bg-blue-500 text-white rounded' onClick={isRecording ? stopRecording : startRecording}>
-            {isRecording ? 'Stop Recording' : 'Record Video'}
+      
+      {/* Control Panel */}
+      <div className='grid grid-cols-3 gap-4'>
+        <div className='p-3'>
+          <button className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'>
+            <Icon type='back' />
           </button>
         </div>
-      )}
+        <div className='p-3'>
+          {/* Capture controls */}
+          {isTakeMedia &&
+            <button className={`w-12 h-12 rounded-full border-[1px] outline outline-4 shadow-md transition-all duration-300
+              ${isRecording ? 'bg-red-500 border-red-500 outline-red-300 shadow-lg' : 'bg-white border-white outline-white hover:bg-gray-100'}`}
+            onClick={handleTypeClick}>
+          </button>}
+          {/* Retake button */}
+          {(capturedMedia || videoUrl) && !isTakeMedia && (
+            <>
+              <button
+              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
+              onClick={retakeMedia}
+              >
+                <Icon type='retake' />
+              </button>
+              <p className='text-xs'>Retake</p>
+              <button
+              className='w-12 h-12 mt-4 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
+              >
+                <Icon type='save' />
+              </button>
+              <p className='text-xs'>Save & Share</p>
+            </>
+          )}
+        </div>
+        <div className='p-3'>
+          {isTakeMedia && <Toggle emitValue={handleTypeEmit} />}
+          {(capturedMedia || videoUrl) && !isTakeMedia && (
+            <>
+              <button
+              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
+              >
+                <Icon type='qrcode' />
+              </button>
+              <p className='text-xs'>Play Again</p>
+            </>
+          )}
+        </div>
+      </div>
 
-      {/* Retake button */}
-      {(capturedMedia || videoUrl) && !isTakeMedia && (
-        <button className='px-4 py-2 m-2 bg-yellow-500 text-white rounded' onClick={retakeMedia}>Retake</button>
-      )}
     </div>
   );
 };

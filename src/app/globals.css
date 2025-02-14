@@ -9,3 +9,11 @@
   background-size: contain;
   height: 100vh;
 }
+
+.text-body-color {
+  color: black;
+}
+
+span svg.text-white {
+  color: white !important;
+}
