@@ -14,17 +14,15 @@ const Random = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
   const [showMediaCapture, setShowMediaCapture] = useState(false);
-  const [isSecret, setIsSecret] = useState(true);
+  const [isSecret] = useState(Math.random() < 0.3); // Randomly choose normal (70%) or secret (30%)
 
   useEffect(() => {
-    // Randomly choose normal (70%) or secret (30%)
-    setIsSecret(Math.random() < 0.3);
-    setFrames(isSecret ? secretFrames : normalFrames);
+    setFrames(!isSecret ? normalFrames : secretFrames);
   }, []);
     
   // If secret, show congratulation sequence after it ends
   useEffect(() => {
-    if (frames.length > 0) {
+    if (frames?.length > 0) {
       const timeout = setTimeout(() => {
         if (isSecret) {
           setShowCongrats(true);
@@ -36,29 +34,29 @@ const Random = () => {
         } else {
           setShowMediaCapture(true);
         }
-      }, (frames.length * 100));
+      }, (frames?.length * 100));
       return () => clearTimeout(timeout);
     }
   }, [frames, isSecret]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % frames.length);
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % frames?.length);
     }, 100);
     return () => clearInterval(interval);
   }, [frames]);
-
+  
   return (
     <div className='flex justify-center items-center h-screen'>
-      {/* {frames && !showMediaCapture ?
+      {frames[currentIndex] && !showMediaCapture ?
       <Image 
         src={frames[currentIndex]} 
         alt='Animation Frame' 
-        width={400} 
-        height={400} 
-      />: null} */}
-      {/* {showMediaCapture && <MediaCapture isSecret={isSecret} />} */}
-      <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />
+        width={400}
+        height={400}
+        priority
+      />: null}
+      {showMediaCapture && <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />}
     </div>
   );
 }

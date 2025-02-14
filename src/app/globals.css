@@ -17,3 +17,8 @@
 span svg.text-white {
   color: white !important;
 }
+
+img {
+  width: auto;
+  height: auto;
+}
