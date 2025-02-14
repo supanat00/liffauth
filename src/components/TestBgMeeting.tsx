@@ -11,19 +11,16 @@ const CameraPreview: React.FC = () => {
 
   useEffect(() => {
     const loadResources = async () => {
-      console.log('🔄 Loading resources...');
 
       // Load BodyPix Model
       const model = await bodyPix.load();
       setBodyPixModel(model);
-      console.log('✅ BodyPix Model Fully Loaded');
 
       // Load background image
       const bgImage = new Image();
       bgImage.src = '/frame/img/pink-bg.jpg'; // Change this to your background image
       bgImage.onload = () => {
         backgroundImageRef.current = bgImage;
-        console.log('✅ Background Image Fully Loaded:', bgImage.src);
       };
 
       // Access webcam
@@ -35,7 +32,6 @@ const CameraPreview: React.FC = () => {
         video.srcObject = stream;
         video.onloadedmetadata = () => {
           video.play();
-          console.log('✅ Webcam is Ready');
           setIsProcessingReady(true);
         };
       }
@@ -54,7 +50,6 @@ const CameraPreview: React.FC = () => {
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
 
     if (!canvas || !video || !ctx || !backgroundImageRef.current) {
-      console.log('❌ Skipping frame: Resources not ready.');
       return;
     }
 
