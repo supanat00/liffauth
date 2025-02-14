@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
 import Random from '@/components/Random';
-// import liff from '@line/liff';
+import liff from '@line/liff';
+import Test from '@/components/Test';
 
 export default function App() {
   const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
@@ -24,7 +25,7 @@ export default function App() {
         if (liffInstance.isLoggedIn()) {
           setIsLoggedIn(true);
           const profile = await liffInstance.getProfile();
-          console.log(profile, profile.userId);
+          // console.log(profile, profile.userId);
           setUser({ displayName: profile.displayName, userId: profile.userId });
         } else {
           liffInstance.login();
@@ -74,7 +75,8 @@ export default function App() {
         <p className='mt-2'>Name: {user?.displayName}</p>
       </section>
 
-      <Random />
+      <Test />
+      {/* <Random /> */}
 
     </section>
   );

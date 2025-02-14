@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import * as bodyPix from '@tensorflow-models/body-pix';
+import "@tensorflow/tfjs";
 import '@tensorflow/tfjs';
 import Icon from '@/components/Icon';
 import Toggle from './Toggle';
 import UploadToS3 from './UploadToS3';
+
 
 interface MediaCaptureProps {
   isSecret: boolean;
@@ -30,6 +32,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   const [isTakeMedia, setIsTakeMedia] = useState(true);
   const [type, setType] = useState<string | null>(null);
   const [fileUpload, setFileUpload] = useState<File | null>(null);
+  const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
+  const backgroundColor = "#008080"; // Change this to any color you want
 
   const handleTypeEmit = (value: boolean) => {
     setType(!value ? 'video' : 'photo');
@@ -42,6 +46,14 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   // Reduce Camera Preview to Fit Inside PNG Frame
   const cameraWidth = 350;  // Smaller than frameWidth
   const cameraHeight = 600; // Maintain 3:4 ratio
+
+  useEffect(() => {
+    const loadBodyPix = async () => {
+      const model = await bodyPix.load();
+      setBodyPixModel(model);
+    };
+    loadBodyPix();
+  }, []);
 
   useEffect(() => {
     // Preload all frames into memory
