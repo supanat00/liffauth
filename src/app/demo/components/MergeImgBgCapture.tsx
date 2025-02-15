@@ -1,4 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 import Icon from '@/components/Icon';
@@ -10,41 +12,56 @@ interface MediaCaptureProps {
   artistName: string;
 }
 
-const solidWhiteColor = '#ffffff'; // White background
-const solidPinkColor = '#ffb3c3'; // Soft pink background
-const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/standard${String(i).padStart(4, '0')}.png`);
-const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
+const imgWhiteBg = '/frame/img/white-bg.jpg'; // Background image
+const imgPinkBg = '/frame/img/pink-bg.jpg'; // Background image
+const frameNormal = '/frame/png-seq/normal/standard'; // PNG sequence path
+const frameSecret = '/frame/png-seq/secret/khunpol/secret layer 1'; // PNG sequence path
 
-// Set PNG Frame Size (3:4 Aspect Ratio)
-const frameWidth = 350;
-const frameHeight = 600;
-
-// Reduce Camera Preview to Fit Inside PNG Frame
-const cameraWidth = 350;  // Smaller than frameWidth
-const cameraHeight = 600; // Maintain 3:4 ratio
+const TOTAL_FRAMES = 30; // Total frames in sequence
+const FRAME_RATE = 100; // Animation speed in ms per frame
 
 const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
-  const [isProcessingReady, setIsProcessingReady] = useState(false);
-  const [pngFrames, setPngFrames] = useState<HTMLImageElement[]>([]);
-  const frameIndex = useRef(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [frameIndex, setFrameIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
   const [type, setType] = useState<string | null>(null);
   const [fileUpload, setFileUpload] = useState<File | null>(null);
-  const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const [isProcessingReady, setIsProcessingReady] = useState(false);
+  const pngFramesRef = useRef<HTMLImageElement[]>([]);
 
   const loadResources = async () => {
     const model = await bodyPix.load();
     setBodyPixModel(model);
 
+    // Load background image
+    const bgImage = new Image();
+    bgImage.src = (isSecret ? imgWhiteBg : imgPinkBg);
+    bgImage.onload = () => {
+      backgroundImageRef.current = bgImage;
+    };
+
+    // Load PNG sequence
+    const frames: HTMLImageElement[] = [];
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+      const img = new Image();
+      img.src = `${isSecret ? frameSecret : frameNormal}${String(i).padStart(4, '0')}.png`; // Zero-padded filenames
+      frames.push(img);
+    }
+    pngFramesRef.current = frames;
+
+    // Access webcam
     const video = videoRef.current;
     if (video) {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 350, height: 600 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: cameraWidth, height: cameraHeight },
+      });
       video.srcObject = stream;
       video.onloadedmetadata = () => {
         video.play();
@@ -58,90 +75,92 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   }, []);
 
   useEffect(() => {
-    const loadImages = async () => {
-      const images = await Promise.all(
-        (isSecret ? frameSecret : frameNormal).map((src) => {
-          return new Promise<HTMLImageElement>((resolve) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => resolve(img);
-          });
-        })
-      );
-      setPngFrames(images);
-    };
-    loadImages();
-  }, []);
-
-  let lastTime = 0;
+    if (isProcessingReady) {
+      const interval = setInterval(() => {
+        setFrameIndex((prevIndex) => (prevIndex + 1) % TOTAL_FRAMES);
+      }, FRAME_RATE);
+      return () => clearInterval(interval);
+    }
+  }, [isProcessingReady]);
 
   const replaceBackground = async () => {
-    if (!isProcessingReady || !bodyPixModel || pngFrames.length === 0) return;
+    if (!isProcessingReady || !bodyPixModel) return;
+
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
-    if (!canvas || !video || !ctx) return;
-  
-    const now = performance.now();
-    if (now - lastTime < 33) return;
-    lastTime = now;
-  
+
+    if (!canvas || !video || !ctx || !backgroundImageRef.current) return;
+
+    // Step 1: Perform segmentation
     const segmentation = await bodyPixModel.segmentPerson(video, {
       internalResolution: 'high',
       segmentationThreshold: 0.8,
     });
-  
-    const maskImageData = bodyPix.toMask(
+
+    // Step 2: Get raw mask as pixel data
+    const mask = bodyPix.toMask(
       segmentation,
-      { r: 255, g: 255, b: 255, a: 255 },  // White mask for the person
-      { r: 0, g: 0, b: 0, a: 0 }  // Transparent background
+      { r: 255, g: 255, b: 255, a: 255 }, // Keep person (White)
+      { r: 0, g: 0, b: 0, a: 0 } // Remove background (Transparent)
     );
-  
-    // 1. **Clear the canvas**
+
+    // Step 3: Clear previous frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-    // 2. **Apply solid background color (MUST be first)**
-    ctx.fillStyle = (isSecret ? solidWhiteColor : solidPinkColor);
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-    // 3. **Draw the person on top (video feed)**
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
-    // 4. **Create a separate mask canvas**
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = canvas.width;
-    maskCanvas.height = canvas.height;
-    const maskCtx = maskCanvas.getContext('2d');
-    if (maskCtx) {
-      maskCtx.putImageData(maskImageData, 0, 0);
+
+    // Step 4: Draw the background image **first**
+    ctx.drawImage(backgroundImageRef.current, 0, 0, frameWidth, frameHeight);
+
+    // Step 5: Create an offscreen canvas for the person (camera preview)
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = frameWidth;
+    offscreenCanvas.height = frameHeight;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+
+    if (offscreenCtx) {
+      // Draw the camera preview onto the offscreen canvas
+      offscreenCtx.drawImage(video, 0, 0, cameraWidth, cameraHeight);
+
+      // Apply the mask pixel-by-pixel to show only the person
+      const imageData = offscreenCtx.getImageData(0, 0, cameraWidth, cameraHeight);
+      const maskData = mask.data;
+
+      for (let i = 0; i < maskData.length; i += 4) {
+        if (maskData[i] === 0 && maskData[i + 1] === 0 && maskData[i + 2] === 0) {
+          // Background pixel: Set it to transparent
+          imageData.data[i + 3] = 0;
+        }
+      }
+      offscreenCtx.putImageData(imageData, 0, 0);
+
+      // Draw the masked person (camera preview) onto the main canvas **(This was missing)**
+      ctx.drawImage(offscreenCanvas, 0, 0);
     }
-  
-    // 5. **Apply the mask to keep only the person**
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(maskCanvas, 0, 0);
-  
-    // 6. **Reapply the solid color BEHIND the person (ensures no white areas)**
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = (isSecret ? solidWhiteColor : solidPinkColor);
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-    // 7. **Reset composite mode & overlay PNG frame**
-    ctx.globalCompositeOperation = 'source-over';
-    const frame = pngFrames[frameIndex.current];
-    if (frame) {
-      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+
+    // Step 6: Draw PNG frame sequence on top
+    if (pngFramesRef.current[frameIndex]) {
+      ctx.drawImage(pngFramesRef.current[frameIndex], 0, 0, frameWidth, frameHeight);
     }
-  
-    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
   };
-  
+
   useEffect(() => {
     if (isProcessingReady && bodyPixModel) {
       const interval = setInterval(replaceBackground, 33);
       return () => clearInterval(interval);
     }
-  }, [isProcessingReady, bodyPixModel, pngFrames]);
+  }, [isProcessingReady, bodyPixModel, frameIndex]);
+
+  const handleTypeEmit = (value: boolean) => {
+    setType(!value ? 'video' : 'photo');
+  };
+
+  // Set PNG Frame Size (3:4 Aspect Ratio)
+  const frameWidth = 350;
+  const frameHeight = 600;
+
+  // Reduce Camera Preview to Fit Inside PNG Frame
+  const cameraWidth = 350;  // Smaller than frameWidth
+  const cameraHeight = 600; // Maintain 3:4 ratio
 
   // Capture Photo with Correct Camera & Frame Size
   const capturePhoto = () => {
@@ -222,7 +241,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
     setIsTakeMedia(true);
     setIsRecording(false);
     setFileUpload(null);
-    frameIndex.current = 0; // Reset animation frame index  
+    setFrameIndex(0); // Reset animation frame index  
     // Clear canvas
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
@@ -244,7 +263,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
     // Reload PNG frames and background image
     loadResources();
   };
-
+  
   const handleTypeClick = () => {
     if (type === 'photo' || type === null) {
       capturePhoto();
@@ -257,16 +276,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
     }
   };
 
-  const handleTypeEmit = (value: boolean) => {
-    setType(!value ? 'video' : 'photo');
-  };
-
   return (
     <div>
       <>
         {isTakeMedia && <>
-          <video ref={videoRef} autoPlay playsInline width='350' height='600' style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
-          <canvas ref={canvasRef} width='350' height='600' />
+        <video ref={videoRef} style={{ display: 'none' }} />
+        <canvas ref={canvasRef} width={frameWidth} height={frameHeight} />
         </>}
         
         <div>

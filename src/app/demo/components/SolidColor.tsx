@@ -2,26 +2,25 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 
-const solidColor = '#ffb3c3'; // Change this to your preferred solid color
+const solidColor = '#ffb3c3'; // Soft pink background
+const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
 
 const CameraPreview: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
   const [isProcessingReady, setIsProcessingReady] = useState(false);
+  const [pngFrames, setPngFrames] = useState<HTMLImageElement[]>([]);
+  const frameIndex = useRef(0);
 
   useEffect(() => {
     const loadResources = async () => {
-      // Load BodyPix Model
       const model = await bodyPix.load();
       setBodyPixModel(model);
 
-      // Access webcam
       const video = videoRef.current;
       if (video) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 },
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 350, height: 600 } });
         video.srcObject = stream;
         video.onloadedmetadata = () => {
           video.play();
@@ -29,84 +28,99 @@ const CameraPreview: React.FC = () => {
         };
       }
     };
-
     loadResources();
+  }, []);
+
+  useEffect(() => {
+    const loadImages = async () => {
+      const images = await Promise.all(
+        frameSecret.map((src) => {
+          return new Promise<HTMLImageElement>((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => resolve(img);
+          });
+        })
+      );
+      setPngFrames(images);
+    };
+    loadImages();
   }, []);
 
   let lastTime = 0;
 
   const replaceBackground = async () => {
-    if (!isProcessingReady || !bodyPixModel) return;
-  
+    if (!isProcessingReady || !bodyPixModel || pngFrames.length === 0) return;
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
-  
     if (!canvas || !video || !ctx) return;
   
-    // Throttle FPS to ~30fps
     const now = performance.now();
     if (now - lastTime < 33) return;
     lastTime = now;
   
-    // Get segmentation mask from BodyPix
     const segmentation = await bodyPixModel.segmentPerson(video, {
       internalResolution: 'high',
       segmentationThreshold: 0.8,
     });
   
-    // Generate RGBA mask with smooth edges
     const maskImageData = bodyPix.toMask(
       segmentation,
-      { r: 0, g: 0, b: 0, a: 255 },  // Person fully visible
-      { r: 0, g: 0, b: 0, a: 0 }     // Background fully transparent
+      { r: 255, g: 255, b: 255, a: 255 },  // White mask for the person
+      { r: 0, g: 0, b: 0, a: 0 }  // Transparent background
     );
   
-    // Clear previous frame
+    // 1. **Clear the canvas**
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-    // ✅ STEP 1: Draw soft pink background FIRST
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#FFB3D9'; // Soft pink background
+    // 2. **Apply solid background color (MUST be first)**
+    ctx.fillStyle = solidColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-    // ✅ STEP 2: Draw webcam feed on top of pink background
+    // 3. **Draw the person on top (video feed)**
+    ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   
-    // ✅ STEP 3: Create an offscreen mask canvas
+    // 4. **Create a separate mask canvas**
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = canvas.width;
     maskCanvas.height = canvas.height;
     const maskCtx = maskCanvas.getContext('2d');
-  
     if (maskCtx) {
       maskCtx.putImageData(maskImageData, 0, 0);
-      maskCtx.filter = 'blur(20px)'; // Increased blur for smoother edges
     }
   
-    // ✅ STEP 4: Apply the mask so only the person remains visible
+    // 5. **Apply the mask to keep only the person**
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(maskCanvas, 0, 0);
   
-    // ✅ STEP 5: Reset blending mode
+    // 6. **Reapply the solid color BEHIND the person (ensures no white areas)**
     ctx.globalCompositeOperation = 'destination-over';
-  
-    // 🔥 STEP 6: Fill any remaining transparent areas with soft pink again
     ctx.fillStyle = solidColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+    // 7. **Reset composite mode & overlay PNG frame**
+    ctx.globalCompositeOperation = 'source-over';
+    const frame = pngFrames[frameIndex.current];
+    if (frame) {
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+    }
+  
+    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
   };
   
   useEffect(() => {
     if (isProcessingReady && bodyPixModel) {
-      const interval = setInterval(replaceBackground, 33); // Run at ~30fps
+      const interval = setInterval(replaceBackground, 33);
       return () => clearInterval(interval);
     }
-  }, [isProcessingReady, bodyPixModel]);
+  }, [isProcessingReady, bodyPixModel, pngFrames]);
 
   return (
     <div>
-      <video ref={videoRef} autoPlay playsInline width="640" height="480" style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
-      <canvas ref={canvasRef} width='640' height='480' />
+      <video ref={videoRef} autoPlay playsInline width='350' height='600' style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
+      <canvas ref={canvasRef} width='350' height='600' />
     </div>
   );
 };

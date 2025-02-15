@@ -23,7 +23,7 @@ const frameHeight = 600;
 const cameraWidth = 350;  // Smaller than frameWidth
 const cameraHeight = 600; // Maintain 3:4 ratio
 
-const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => {
+const CameraPreview: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
@@ -328,4 +328,4 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   );
 };
 
-export default MediaCapture;
+export default CameraPreview;
