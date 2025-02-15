@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
 import Random from '@/components/Random';
-import liff from '@line/liff';
-import TestBgMeeting from '@/components/TestBgMeeting';
 
 export default function App() {
   const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
@@ -75,8 +73,7 @@ export default function App() {
         <p className='mt-2'>Name: {user?.displayName}</p>
       </section>
 
-      <TestBgMeeting />
-      {/* <Random /> */}
+      <Random />
 
     </section>
   );

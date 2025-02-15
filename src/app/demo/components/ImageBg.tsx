@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 
+const imgBg = '/frame/img/pink-bg.jpg'; // Change this to your background image
+
 const CameraPreview: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -18,7 +20,7 @@ const CameraPreview: React.FC = () => {
 
       // Load background image
       const bgImage = new Image();
-      bgImage.src = '/frame/img/pink-bg.jpg'; // Change this to your background image
+      bgImage.src = imgBg;
       bgImage.onload = () => {
         backgroundImageRef.current = bgImage;
       };
@@ -60,7 +62,7 @@ const CameraPreview: React.FC = () => {
 
     // Get segmentation mask from BodyPix
     const segmentation = await bodyPixModel.segmentPerson(video, {
-      internalResolution: 'medium', // Higher for better accuracy
+      internalResolution: 'high', // Higher for better accuracy
       segmentationThreshold: 0.8, // Adjust for better edge detection
     });
 
