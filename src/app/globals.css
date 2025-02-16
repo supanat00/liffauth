@@ -6,8 +6,9 @@
   background-image: url('/frame/img/bg.jpg');
   background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
-  height: 100vh;
+  background-size: cover;
+  width: 100wh;
+  max-height: 100vh;
 }
 
 .text-body-color {
@@ -25,17 +26,7 @@ img {
 
 video {
   width: 100%;
-  max-width: 405px;
-  height: auto;
-  aspect-ratio: 9 / 16;
-  object-fit: cover; /* Prevents unwanted stretching */
-  transform: scaleX(-1); /* ✅ Fix mirrorizng */
-}
-
-@media (max-width: 768px) { /* Mobile Fix */
-  video {
-    transform: scale(0.85); /* Pulls the image back to match laptop FOV */
-    max-width: 100%;
-  }
+  height: auto; /* Maintain aspect ratio */
+  max-height: 600px; /* Avoid overflow */
 }
 

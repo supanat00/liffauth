@@ -1,8 +1,21 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Icon from './Icon'
 
-const Toggle = ({ emitValue }: { emitValue: (value: boolean) => void }) => {
-  const [isChecked, setIsChecked] = useState(false)
+interface ToggleProps {
+  type: string | null;
+  emitValue: (value: boolean) => void;
+}
+
+const Toggle: React.FC<ToggleProps> = ({ type, emitValue }) => {
+  const [isChecked, setIsChecked] = useState(false);
+
+  useEffect(() => {
+    if(type === 'video') {
+      setIsChecked(true);
+    } else {
+      setIsChecked(false);
+    }
+  });
 
   const handleCheckboxChange = () => {
     setIsChecked(!isChecked)

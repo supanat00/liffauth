@@ -56,11 +56,10 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       // const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 350, height: 600 } });
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: 350,
-          height: 600,
-          aspectRatio: 9 / 16,  // Force portrait mode
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
           facingMode: 'user', // Use front camera
-          frameRate: { ideal: 30, max: 60 },  // Smooth recording
+          frameRate: { ideal: 30, max: 60 },
         },
       });
       video.srcObject = stream;
@@ -191,7 +190,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       tempCanvas.toBlob((blob) => {
         if (!blob) return;
         // Create a file from the Blob
-        const file = new File([blob], `${artistId}-image.png`, { type: 'image/png' });
+        const file = new File([blob], `${artistName}-image.png`, { type: 'image/png' });
         setFileUpload(file);
         // Create a URL for the Blob and trigger the download
         const url = URL.createObjectURL(file);
@@ -227,7 +226,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       setIsTakeMedia(false);
 
       // Convert Blob to File for upload
-      const fileUpload = new File([blob], `${artistId}-video.webm`, { type: 'video/webm' });
+      const fileUpload = new File([blob], `${artistName}-video.webm`, { type: 'video/webm' });
       setFileUpload(fileUpload);
     };
 
@@ -294,7 +293,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       <>
         {isTakeMedia && <>
           <video ref={videoRef} autoPlay playsInline width='350' height='600' style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
-          <canvas ref={canvasRef} width='350' height='600' style={{ aspectRatio: '9 / 16', transform: 'scale(0.85)' }} />
+          <canvas ref={canvasRef} width='350' height='600' style={{ aspectRatio: '9 / 16' }} />
         </>}
         
         <div>
@@ -338,7 +337,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           )}
         </div>
         <div className='p-3'>
-          {isTakeMedia && <Toggle emitValue={handleTypeEmit} />}
+          {isTakeMedia && <Toggle type={type} emitValue={handleTypeEmit} />}
           {(capturedMedia || videoUrl) && !isTakeMedia && (
             <>
               <button
