@@ -17,9 +17,11 @@
     "@tensorflow/tfjs-backend-wasm": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "aws-sdk": "^2.1692.0",
+    "firebase-admin": "^13.1.0",
+    "firebase-functions": "^6.3.2",
     "gifler": "^0.1.0",
     "html2canvas": "^1.4.1",
-    "next": "15.1.6",
+    "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-webcam": "^7.2.0"

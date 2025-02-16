@@ -55,6 +55,7 @@ const Random = () => {
         width={400}
         height={400}
         priority
+        style={{ width: '600px' }}
       />)}
       {showMediaCapture && <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />}
     </div>

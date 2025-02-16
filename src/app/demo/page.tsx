@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = "force-static";  // Ensure static export
+
 import ImageBg from './components/ImageBg';
 import SolidColor from './components/SolidColor';
 import MergeColorBgCapture from './components/MergeColorBgCapture';
