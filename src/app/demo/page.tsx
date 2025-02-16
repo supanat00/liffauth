@@ -7,11 +7,13 @@ import SolidColor from './components/SolidColor';
 import MergeColorBgCapture from './components/MergeColorBgCapture';
 import MergeImgBgCapture from './components/MergeImgBgCapture';
 import CaptureNonBg from './components/CaptureNonBg';
+import Zoom from './components/Zoom';
 
 export default function App() {
 
   return (
     <section className='relative flex flex-col items-center justify-center' style={{ backgroundColor: '#ddd' }}>
+      {/* <Zoom /> */}
       <div className='grid grid-cols-3 gap-4'>
         <div className='p-4'>
           <h1 className='m-2'>Image BG</h1>
