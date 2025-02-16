@@ -5,9 +5,11 @@ import Icon from '@/components/Icon';
 import UploadToS3 from '@/components/UploadToS3';
 import Toggle from '@/components/Toggle';
 
+import artists from '../../public/artist.json';
+
 interface MediaCaptureProps {
   isSecret: boolean;
-  artistName: string;
+  artistId: number;
 }
 
 const solidWhiteColor = '#ffffff'; // White background
@@ -23,7 +25,7 @@ const frameHeight = 600;
 const cameraWidth = 350;  // Smaller than frameWidth
 const cameraHeight = 600; // Maintain 3:4 ratio
 
-const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => {
+const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
@@ -37,6 +39,13 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [artistName, setArtistName] = useState<string>('');
+
+  useEffect(() => {
+    loadResources();
+    let name = artists.find(artist => artist.artistId === artistId)?.artistName;
+    setArtistName(name || 'NORMAL');
+  }, []);
 
   const loadResources = async () => {
     const model = await bodyPix.load();
@@ -44,9 +53,18 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
 
     const video = videoRef.current;
     if (video) {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 350, height: 600 } });
+      // const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 350, height: 600 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 350,
+          height: 600,
+          aspectRatio: 9 / 16,  // Force portrait mode
+          facingMode: 'user', // Use front camera
+          frameRate: { ideal: 30, max: 60 },  // Smooth recording
+        },
+      });
       video.srcObject = stream;
-      video.onloadedmetadata = () => {
+      video.onloadedmetadata = async () => {
         video.play();
         setIsProcessingReady(true);
       };
@@ -80,12 +98,14 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
     const canvas = canvasRef.current;
     const video = videoRef.current;
     const ctx = canvas?.getContext('2d', { willReadFrequently: true });
+  
     if (!canvas || !video || !ctx) return;
   
     const now = performance.now();
     if (now - lastTime < 33) return;
     lastTime = now;
   
+    // Get person segmentation
     const segmentation = await bodyPixModel.segmentPerson(video, {
       internalResolution: 'high',
       segmentationThreshold: 0.8,
@@ -97,18 +117,23 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       { r: 0, g: 0, b: 0, a: 0 }  // Transparent background
     );
   
-    // 1. **Clear the canvas**
+    // **CLEAR CANVAS**
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-    // 2. **Apply solid background color (MUST be first)**
-    ctx.fillStyle = (isSecret ? solidWhiteColor : solidPinkColor);
+    // **FLIP CONTEXT HORIZONTALLY (Fix Camera Flip)**
+    ctx.save();
+    ctx.scale(-1, 1); // Flip horizontally
+    ctx.translate(-canvas.width, 0); // Move it back into position
+  
+    // **DRAW SOLID BACKGROUND COLOR**
+    ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-    // 3. **Draw the person on top (video feed)**
+    // **DRAW VIDEO (FLIPPED)**
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   
-    // 4. **Create a separate mask canvas**
+    // **CREATE A MASK CANVAS**
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = canvas.width;
     maskCanvas.height = canvas.height;
@@ -117,16 +142,19 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       maskCtx.putImageData(maskImageData, 0, 0);
     }
   
-    // 5. **Apply the mask to keep only the person**
+    // **FLIP MASK TO MATCH VIDEO**
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(maskCanvas, 0, 0);
   
-    // 6. **Reapply the solid color BEHIND the person (ensures no white areas)**
+    // **DRAW SOLID COLOR BEHIND PERSON**
     ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = (isSecret ? solidWhiteColor : solidPinkColor);
+    ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   
-    // 7. **Reset composite mode & overlay PNG frame**
+    // **RESET TRANSFORMATION**
+    ctx.restore();
+  
+    // **DRAW PNG FRAME OVERLAY**
     ctx.globalCompositeOperation = 'source-over';
     const frame = pngFrames[frameIndex.current];
     if (frame) {
@@ -163,7 +191,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       tempCanvas.toBlob((blob) => {
         if (!blob) return;
         // Create a file from the Blob
-        const file = new File([blob], `${artistName}-image.png`, { type: 'image/png' });
+        const file = new File([blob], `${artistId}-image.png`, { type: 'image/png' });
         setFileUpload(file);
         // Create a URL for the Blob and trigger the download
         const url = URL.createObjectURL(file);
@@ -199,7 +227,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       setIsTakeMedia(false);
 
       // Convert Blob to File for upload
-      const fileUpload = new File([blob], `${artistName}-video.webm`, { type: 'video/webm' });
+      const fileUpload = new File([blob], `${artistId}-video.webm`, { type: 'video/webm' });
       setFileUpload(fileUpload);
     };
 
@@ -266,7 +294,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       <>
         {isTakeMedia && <>
           <video ref={videoRef} autoPlay playsInline width='350' height='600' style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
-          <canvas ref={canvasRef} width='350' height='600' />
+          <canvas ref={canvasRef} width='350' height='600' style={{ aspectRatio: '9 / 16', transform: 'scale(0.85)' }} />
         </>}
         
         <div>
@@ -284,9 +312,18 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4'>
         <div className='p-3'>
-          <button className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'>
-            <Icon type='back' />
-          </button>
+          {/* Retake button */}
+          {(capturedMedia || videoUrl) && !isTakeMedia && (
+            <>
+              <button
+              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
+              onClick={retakeMedia}
+              >
+                <Icon type='retake' />
+              </button>
+              <p className='text-xs mt-1 ml-[5px]'>Retake</p>
+            </>
+          )}
         </div>
         <div className='p-3'>
           {/* Capture controls */}
@@ -297,16 +334,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
           </button>}
           {/* Retake button */}
           {(capturedMedia || videoUrl) && !isTakeMedia && (
-            <>
-              <button
-              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-              onClick={retakeMedia}
-              >
-                <Icon type='retake' />
-              </button>
-              <p className='text-xs'>Retake</p>
-              <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
-            </>
+            <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
           )}
         </div>
         <div className='p-3'>
@@ -318,7 +346,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
               >
                 <Icon type='qrcode' />
               </button>
-              <p className='text-xs'>Play Again</p>
+              <p className='text-xs mt-1 ml-[-5px]'>Play Again</p>
             </>
           )}
         </div>

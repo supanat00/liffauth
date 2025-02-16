@@ -56,14 +56,14 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
 
   return (
     <>
-    <a className='w-12 h-12 mt-4 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
+    <a className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
     href={(downloadMedia ? downloadMedia : '')}
     download={`${artistName}-${downloadMedia?.includes('data:image') ? 'image.png' : 'video.webm'}`}
     onClick={() => { if(uploadMedia) uploadToS3(uploadMedia) }}
     >
       <Icon type='save' />
     </a>
-    <p className='text-xs'>{!fileUploadStatus ? 'Save & Share' : 'Uploading...'}</p>
+    <p className='text-xs mt-1 ml-[-10px]'>{!fileUploadStatus ? 'Save & Share' : 'Uploading...'}</p>
     </>
   );
 };

@@ -22,3 +22,20 @@ img {
   width: auto;
   height: auto;
 }
+
+video {
+  width: 100%;
+  max-width: 405px;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  object-fit: cover; /* Prevents unwanted stretching */
+  transform: scaleX(-1); /* ✅ Fix mirrorizng */
+}
+
+@media (max-width: 768px) { /* Mobile Fix */
+  video {
+    transform: scale(0.85); /* Pulls the image back to match laptop FOV */
+    max-width: 100%;
+  }
+}
+

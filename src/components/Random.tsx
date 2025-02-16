@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import MediaCapture from './MediaCapture';
 
 const normalFrames = Array.from({ length: 75 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
 const secretFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
 const congratsFrames = Array.from({ length: 28 }, (_, i) => `/frame/png-seq/congrat-secret/Comp 4_${String(i).padStart(5, '0')}.png`);
-const artistName = 'Khunpol';
+const artistId = 4;
 
 const Random = () => {
   const [frames, setFrames] = useState<string[]>([]);
@@ -77,7 +76,7 @@ const Random = () => {
           style={{ width: '600px' }}
         />
       )}
-      {showMediaCapture && <MediaCapture isSecret={isSecret} artistName={isSecret ? artistName : 'normal'} />}
+      {showMediaCapture && <MediaCapture isSecret={isSecret} artistId={isSecret ? artistId : 0} />}
     </div>
   );
 }
