@@ -310,7 +310,7 @@ const CameraPreview: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) =>
           )}
         </div>
         <div className='p-3'>
-          {isTakeMedia && <Toggle emitValue={handleTypeEmit} />}
+          {isTakeMedia && <Toggle type={type} emitValue={handleTypeEmit} />}
           {(capturedMedia || videoUrl) && !isTakeMedia && (
             <>
               <button
