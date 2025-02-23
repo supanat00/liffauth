@@ -58,8 +58,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         video: {
           width: isMobile ? { ideal: 640 } : { ideal: 1080 },  // Reduce width for mobile
           height: isMobile ? { ideal: 1136 } : { ideal: 1920 }, // Reduce height for mobile
-          facingMode: 'user', // Use front camera
-        },
+          facingMode: 'user',
+          zoom: isMobile ? 1 : undefined,  // Force zoom level to avoid excessive zoom
+        } as unknown as MediaTrackConstraintSet,
       });
   
       video.srcObject = stream;
@@ -68,7 +69,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         setIsProcessingReady(true);
       };
     }
-  };
+  };  
   
   useEffect(() => {
     loadResources();
@@ -104,8 +105,10 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     if (now - lastTime < 33) return;
     lastTime = now;
   
-    // **SET CAMERA PREVIEW SIZE (70%)**
-    const previewScale = 0.7; // Scale to 70% of canvas size
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  
+    // **SET CAMERA PREVIEW SIZE**
+    const previewScale = isMobile ? 0.9 : 0.7; // Slightly larger for mobile
     const previewWidth = canvas.width * previewScale;
     const previewHeight = canvas.height * previewScale;
   
@@ -147,22 +150,26 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         break;
     }
   
-    // **CREATE TEMPORARY CANVAS FOR BODYPIX PROCESSING**
+    // **ADJUST POSITION ON MOBILE**
+    if (isMobile) {
+      yOffset += 30; // Move down slightly for better face positioning
+    }
+  
+    // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = previewWidth;
     tempCanvas.height = previewHeight;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
   
-    // **DRAW SCALED VIDEO ON TEMP CANVAS (for BodyPix)**
+    // **DRAW VIDEO TO TEMP CANVAS**
     tempCtx.drawImage(video, 0, 0, previewWidth, previewHeight);
   
-    // **PROCESS BODY SEGMENTATION ON SCALED VIDEO**
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // **BODY SEGMENTATION**
     const segmentation = await bodyPixModel.segmentPerson(tempCanvas, {
-      internalResolution: isMobile ? 'medium' : 'high',  // Use 'medium' for mobile
-      segmentationThreshold: 0.8, // Lower threshold for better detection
-    });    
+      internalResolution: isMobile ? 'medium' : 'high',
+      segmentationThreshold: 0.75, // Slightly lower for better segmentation
+    });
   
     const maskImageData = bodyPix.toMask(
       segmentation,
@@ -173,12 +180,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     // **CLEAR MAIN CANVAS**
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-    // **FLIP CONTEXT HORIZONTALLY (Fix Camera Flip)**
+    // **FLIP CONTEXT HORIZONTALLY**
     ctx.save();
-    ctx.scale(-1, 1); // Flip horizontally
-    ctx.translate(-canvas.width, 0); // Move it back into position
+    ctx.scale(-1, 1);
+    ctx.translate(-canvas.width, 0);
   
-    // **DRAW SOLID BACKGROUND COLOR FIRST**
+    // **DRAW SOLID BACKGROUND COLOR**
     ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   
@@ -186,7 +193,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(video, xOffset, yOffset, previewWidth, previewHeight);
   
-    // **CREATE MASK CANVAS FOR SEGMENTATION RESULT**
+    // **MASK CANVAS FOR SEGMENTATION**
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = previewWidth;
     maskCanvas.height = previewHeight;
@@ -195,11 +202,11 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       maskCtx.putImageData(maskImageData, 0, 0);
     }
   
-    // **DRAW MASK OVER VIDEO (Scaled & Positioned)**
+    // **DRAW MASK OVER VIDEO**
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(maskCanvas, xOffset, yOffset, previewWidth, previewHeight);
   
-    // **DRAW SOLID COLOR BEHIND PERSON (Ensures Proper Background)**
+    // **DRAW SOLID COLOR BEHIND PERSON**
     ctx.globalCompositeOperation = 'destination-over';
     ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -207,7 +214,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     // **RESET TRANSFORMATION**
     ctx.restore();
   
-    // **DRAW PNG FRAME OVERLAY (Same Size as Frame)**
+    // **DRAW PNG FRAME OVERLAY**
     ctx.globalCompositeOperation = 'source-over';
     const frame = pngFrames[frameIndex.current];
     if (frame) {

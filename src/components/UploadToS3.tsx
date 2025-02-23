@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { S3 } from 'aws-sdk';
 import { useUser } from '@/context/UserContext'; // Import Context
 import Icon from './Icon';
+import { useRouteParams } from '@/context/ParamsContext';
 
 const s3 = new S3({
   region: process.env.NEXT_PUBLIC_AWS_REGION || '',
@@ -20,37 +21,41 @@ interface MediaProps {
 
 export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, artistName }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
-
-  // Liff Data
   const { user } = useUser(); // ดึงข้อมูลผู้ใช้จาก Context
+  const { params } = useRouteParams();
 
   useEffect(() => {
-    if (user) {
+    if (user && params) {
       console.log('User Profile:', user);
+      console.log('Param:', params);
     }
-  }, [user]);
+  }, [user, params]);
 
   const uploadToS3 = async (file: File) => {
-    try {
-      const uploadParams = {
-        Bucket: process.env.NEXT_PUBLIC_S3_BUCKET_NAME || '',
-        Key: `${user?.userId}_${user?.displayName}/${downloadMedia?.includes('data:image') ? 'image' : 'video'}/${Date.now()}_${file.name}`,
-        Body: file,
-        ContentType: file.type,
-      };
-    
+    if(params?.consent) {
       try {
-        setFileUploadStatus(true);
-        const result = await s3.upload(uploadParams).promise();
-        console.log('File uploaded successfully:', result);
-        alert('File upload success');
-        setFileUploadStatus(false);
-      } catch (err) {
-        console.error('Error uploading file:', err);
+        const uploadParams = {
+          Bucket: process.env.NEXT_PUBLIC_S3_BUCKET_NAME || '',
+          Key: `${user?.userId}_${user?.displayName}/${downloadMedia?.includes('data:image') ? 'image' : 'video'}/${Date.now()}_${file.name}`,
+          Body: file,
+          ContentType: file.type,
+        };
+      
+        try {
+          setFileUploadStatus(true);
+          const result = await s3.upload(uploadParams).promise();
+          console.log('File uploaded successfully:', result);
+          alert('File upload success');
+          setFileUploadStatus(false);
+        } catch (err) {
+          console.error('Error uploading file:', err);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        alert('File upload failed');
       }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('File upload failed');
+    } else {
+      console.log('Consent is FALSE, not upload.');
     }
   };
 
@@ -63,7 +68,11 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
     >
       <Icon type='save' />
     </a>
-    <p className='text-xs mt-1 ml-[-10px]'>{!fileUploadStatus ? 'Save & Share' : 'Uploading...'}</p>
+    <p className='text-xs mt-1 ml-[-10px]'>{
+      !fileUploadStatus ?
+      (params?.consent ? 'Save & Share' : 'Save') :
+      (params?.consent ? 'Uploading...' : 'Save')
+    }</p>
     </>
   );
 };

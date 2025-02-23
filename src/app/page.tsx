@@ -1,15 +1,25 @@
 'use client';
 
-export const dynamic = "force-static";  // Ensure static export
+export const dynamic = 'force-static';  // Ensure static export
 
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
 import Random from '@/components/Random';
 
+import CryptoJS from 'crypto-js';
+import { useRouteParams } from '@/context/ParamsContext';
+
+const key = 'd679a343c839d29c8321cd3a469c381b94b7daa22cf99dfd32492f149477d515';
+const iv = '740a01a4ee6dc01cc9e254a7543a22e7';
+
+const url = 'U2FsdGVkX1+cpJdYfqdyJFCdLnIXgeC5fFA6dS1600k=';
+// https://planetofgame.com/urltest/index.html?userid=U2FsdGVkX1/Ahags8CFx5e0neFbscahGWiJSlZFH/pB1DHCeT5ws9mSZWiEjnSaf&consent=U2FsdGVkX1+cpJdYfqdyJFCdLnIXgeC5fFA6dS1600k=
+
 export default function App() {
   // const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   // const { user, setUser } = useUser();
+  const { params, setParams } = useRouteParams();
 
   // // Initialize LIFF
   // useEffect(() => {
@@ -59,6 +69,19 @@ export default function App() {
   //   );
   // }
 
+  useEffect(() => {
+    // let code = decryptAES(url);
+    // console.log(code);
+    setParams({ userId: 'TEST', consent: false, artistId: 1 });
+  }, [setParams]);
+
+  // const decryptAES = (encryptedData: string) => {
+  //   const key = process.env.NEXT_PUBLIC_key || '';
+  //   const iv = process.env.NEXT_PUBLIC_iv || '';
+  //   const bytes = CryptoJS.AES.decrypt(encryptedData, key, { iv, mode: CryptoJS.mode.CBC });
+  //   return bytes.toString(CryptoJS.enc.Utf8);
+  // }
+
   return (
     <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>
       {/* Logout button at top-right */}
@@ -74,7 +97,6 @@ export default function App() {
         <h1 className='text-3xl font-bold'>Welcome</h1>
         <p className='mt-2'>Name: {user?.displayName}</p>
       </section> */}
-
       <Random />
 
     </section>
