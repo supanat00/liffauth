@@ -15,37 +15,50 @@ const Random = () => {
   const [showMediaCapture, setShowMediaCapture] = useState(false);
   const [isSecret] = useState(Math.random() < 0.3); // Randomly choose normal (70%) or secret (30%)
   const [preloadedImages, setPreloadedImages] = useState<HTMLImageElement[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false); // Ensures all images are preloaded
 
   useEffect(() => {
     const selectedFrames = !isSecret ? normalFrames : secretFrames;
     setFrames(selectedFrames);
+    setIsLoaded(false); // Reset loading state
 
-    // Preload images to prevent blinking
-    const images = selectedFrames.map((src) => {
-      const img = new window.Image();
-      img.src = src;
-      return img;
+    // Show loading message while images are preloading
+    Promise.all(
+      selectedFrames.map((src) => {
+        return new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => resolve(img);
+        });
+      })
+    ).then((loadedImages) => {
+      setPreloadedImages(loadedImages);
+      setIsLoaded(true); // Mark images as fully loaded
     });
-
-    setPreloadedImages(images);
   }, [isSecret]);
 
   useEffect(() => {
-    if (frames.length > 0) {
+    if (isLoaded && frames.length > 0) {
       const timeout = setTimeout(() => {
         if (isSecret) {
           setShowCongrats(true);
           setFrames(congratsFrames);
           setCurrentIndex(0);
+          setIsLoaded(false);
 
           // Preload congratulation frames
-          const congratsImages = congratsFrames.map((src) => {
-            const img = new window.Image();
-            img.src = src;
-            return img;
+          Promise.all(
+            congratsFrames.map((src) => {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.src = src;
+                img.onload = () => resolve(img);
+              });
+            })
+          ).then((loadedImages) => {
+            setPreloadedImages(loadedImages);
+            setIsLoaded(true);
           });
-
-          setPreloadedImages(congratsImages);
 
           setTimeout(() => {
             setShowMediaCapture(true);
@@ -56,18 +69,27 @@ const Random = () => {
       }, frames.length * 100);
       return () => clearTimeout(timeout);
     }
-  }, [frames, isSecret]);
+  }, [isLoaded, frames, isSecret]);
 
   useEffect(() => {
+    if (!isLoaded) return; // Ensure animation starts only when images are loaded
+
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % frames.length);
     }, 100);
     return () => clearInterval(interval);
-  }, [frames]);
+  }, [frames, isLoaded]);
 
   return (
-    <div className='flex justify-center items-center h-screen'>
-      {frames[currentIndex] && !showMediaCapture && preloadedImages[currentIndex] && (
+    <div className='flex justify-center items-center h-screen relative'>
+      {!isLoaded && (
+        <div className='flex flex-col items-center justify-center'>
+          <span className='text-lg font-bold text-gray-700'>⏳ Loading images...</span>
+          <div className='w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
+        </div>
+      )}
+      
+      {isLoaded && frames[currentIndex] && !showMediaCapture && (
         <img
           src={preloadedImages[currentIndex].src}
           alt='Animation Frame'
@@ -76,9 +98,10 @@ const Random = () => {
           style={{ width: '600px' }}
         />
       )}
+
       {showMediaCapture && <MediaCapture isSecret={isSecret} artistId={isSecret ? artistId : 0} />}
     </div>
   );
-}
+};
 
 export default Random;
