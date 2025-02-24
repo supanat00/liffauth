@@ -165,11 +165,11 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     // **BODY SEGMENTATION**
     const segmentation = await bodyPixModel.segmentPerson(tempCanvas, {
       internalResolution: 'high',
-      segmentationThreshold: 0.75, // Lower for mobile to prevent missing face parts
-      flipHorizontal: false, // Ensures correct alignment
-      scoreThreshold: 0.15, // Allow lower confidence detections for better face capture
-      maxDetections: 2, // Detect multiple people in case BodyPix fails to recognize at a distance
-    });
+      segmentationThreshold: 0.7,
+      flipHorizontal: false,
+      scoreThreshold: 0.2,
+      maxDetections: 2,
+    });    
 
     // If no person is detected, return without updating the canvas
     if (!segmentation || segmentation.allPoses.length === 0) {
