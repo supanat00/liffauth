@@ -84,8 +84,8 @@ const Random = () => {
     <div className='flex justify-center items-center h-screen relative'>
       {!isLoaded && (
         <div className='flex flex-col items-center justify-center'>
-          <span className='text-lg font-bold text-gray-700'>⏳ Loading images...</span>
-          <div className='w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
+          <span className='text-lg font-bold text-white'>⏳ Loading images...</span>
+          <div className='w-12 h-12 border-4 border-white-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
         </div>
       )}
       

@@ -25,6 +25,9 @@ const frameHeight = 533;
 const cameraWidth = 300;  // Smaller than frameWidth
 const cameraHeight = 533; // Maintain 9:16 ratio
 
+// modify on mobile differently
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -53,14 +56,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   
     const video = videoRef.current;
     if (video) {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: isMobile ? { ideal: 640 } : { ideal: 1080 },  // Reduce width for mobile
-          height: isMobile ? { ideal: 1136 } : { ideal: 1920 }, // Reduce height for mobile
+          width: { ideal: isMobile ? 720 : 1080 }, // Reduce width for mobile to avoid distortion
+          height: { ideal: isMobile ? 1280 : 1920 }, // Keep 9:16 aspect ratio
           facingMode: 'user',
-          zoom: isMobile ? 1 : undefined,  // Force zoom level to avoid excessive zoom
-        } as unknown as MediaTrackConstraintSet,
+        },
       });
   
       video.srcObject = stream;
@@ -105,12 +106,13 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     if (now - lastTime < 33) return;
     lastTime = now;
   
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  
     // **SET CAMERA PREVIEW SIZE**
-    const previewScale = isMobile ? 0.9 : 0.7; // Slightly larger for mobile
+    const previewScale = isMobile ? 2 : 1; // Slightly larger for mobile
     const previewWidth = canvas.width * previewScale;
-    const previewHeight = canvas.height * previewScale;
+    const previewHeight = canvas.height;
+    const videoScale = isMobile ? 0.5 : 1;
+    const videoWidth = previewWidth * videoScale; // Reduce video size
+    const videoHeight = previewHeight * videoScale;
   
     // **DYNAMIC POSITION BASED ON `isSecret`**
     let horizontalPosition = isSecret ? 'left' : 'center'; // 'left', 'center', 'right'
@@ -127,10 +129,10 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         xOffset = 0;
         break;
       case 'right':
-        xOffset = canvas.width - previewWidth;
+        xOffset = canvas.width - videoWidth;
         break;
       default: // 'center'
-        xOffset = (canvas.width - previewWidth) / 2;
+        xOffset = (canvas.width - videoWidth) / 2;
         break;
     }
   
@@ -143,33 +145,37 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         yOffset = 0;
         break;
       case 'bottom':
-        yOffset = canvas.height - previewHeight;
+        yOffset = canvas.height - videoHeight;
         break;
       default: // 'center'
-        yOffset = (canvas.height - previewHeight) / 2;
+        yOffset = (canvas.height - videoHeight) / 2;
         break;
-    }
-  
-    // **ADJUST POSITION ON MOBILE**
-    if (isMobile) {
-      yOffset += 30; // Move down slightly for better face positioning
     }
   
     // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = previewWidth;
-    tempCanvas.height = previewHeight;
+    tempCanvas.width = videoWidth;
+    tempCanvas.height = videoHeight;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
   
     // **DRAW VIDEO TO TEMP CANVAS**
-    tempCtx.drawImage(video, 0, 0, previewWidth, previewHeight);
+    tempCtx.drawImage(video, 0, 0, videoWidth, videoHeight);
   
     // **BODY SEGMENTATION**
     const segmentation = await bodyPixModel.segmentPerson(tempCanvas, {
-      internalResolution: isMobile ? 'medium' : 'high',
-      segmentationThreshold: 0.75, // Slightly lower for better segmentation
+      internalResolution: 'high',
+      segmentationThreshold: 0.75, // Lower for mobile to prevent missing face parts
+      flipHorizontal: false, // Ensures correct alignment
+      scoreThreshold: 0.15, // Allow lower confidence detections for better face capture
+      maxDetections: 2, // Detect multiple people in case BodyPix fails to recognize at a distance
     });
+
+    // If no person is detected, return without updating the canvas
+    if (!segmentation || segmentation.allPoses.length === 0) {
+      console.warn("No person detected. Keeping last frame.");
+      return;
+    }
   
     const maskImageData = bodyPix.toMask(
       segmentation,
@@ -191,12 +197,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   
     // **DRAW VIDEO PREVIEW (SCALED & POSITIONED)**
     ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(video, xOffset, yOffset, previewWidth, previewHeight);
+    ctx.drawImage(video, xOffset, yOffset, videoWidth, videoHeight); // Use adjusted video size
   
     // **MASK CANVAS FOR SEGMENTATION**
     const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = previewWidth;
-    maskCanvas.height = previewHeight;
+    maskCanvas.width = videoWidth;
+    maskCanvas.height = videoHeight;
     const maskCtx = maskCanvas.getContext('2d');
     if (maskCtx) {
       maskCtx.putImageData(maskImageData, 0, 0);
@@ -204,7 +210,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   
     // **DRAW MASK OVER VIDEO**
     ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(maskCanvas, xOffset, yOffset, previewWidth, previewHeight);
+    ctx.drawImage(maskCanvas, xOffset, yOffset, videoWidth, videoHeight);
   
     // **DRAW SOLID COLOR BEHIND PERSON**
     ctx.globalCompositeOperation = 'destination-over';
@@ -352,8 +358,19 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   return (
     <div>
       <>
+        {(!isProcessingReady || !bodyPixModel || !pngFrames) && (
+          <div className='flex flex-col items-center justify-center'>
+            <span className='text-lg font-bold text-white'>🎥 Preparing frame...</span>
+            <div className='w-12 h-12 border-4 border-white-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
+          </div>
+        )}
+
         {isTakeMedia && <>
-          <video ref={videoRef} autoPlay playsInline muted width={cameraWidth} height={cameraHeight} style={{ position: 'absolute', zIndex: -1, visibility: 'hidden' }} />
+          <video
+            ref={videoRef} autoPlay playsInline muted
+            width={cameraWidth} height={cameraHeight}
+            style={{ position: 'absolute', zIndex: -1, visibility: 'hidden'}}
+          />
           <canvas
             ref={canvasRef} width={cameraWidth} height={cameraHeight}
             style={{ aspectRatio: '9 / 16', marginLeft: 'auto', marginRight: 'auto' }}
@@ -372,6 +389,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         </div>
       </>
       
+      {(isProcessingReady && bodyPixModel && pngFrames) && <>
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4'>
         <div className='py-3'>
@@ -393,15 +411,18 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           {isTakeMedia &&
             <button className={`w-12 h-12 rounded-full border-[1px] outline outline-4 shadow-md transition-all duration-300
               ${isRecording ? 'bg-red-500 border-red-500 outline-red-300 shadow-lg' : 'bg-white border-white outline-white hover:bg-gray-100'}`}
-            onClick={handleTypeClick}>
-          </button>}
+              onClick={handleTypeClick}>
+            </button>
+          }
           {/* Retake button */}
           {(capturedMedia || videoUrl) && !isTakeMedia && (
             <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
           )}
         </div>
         <div className='py-3'>
-          {isTakeMedia && <Toggle type={type} emitValue={handleTypeEmit} />}
+          {isTakeMedia && !isRecording &&
+            <Toggle type={type} emitValue={handleTypeEmit} />
+          }
           {(capturedMedia || videoUrl) && !isTakeMedia && (
             <>
               <button
@@ -414,6 +435,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           )}
         </div>
       </div>
+      </>}
 
     </div>
   );
