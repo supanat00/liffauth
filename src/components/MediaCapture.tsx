@@ -27,6 +27,7 @@ const cameraHeight = 533; // Maintain 9:16 ratio
 
 // modify on mobile differently
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -43,6 +44,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [artistName, setArtistName] = useState<string>('');
+  const [videoType, setVideoType] = useState<string>('');
 
   useEffect(() => {
     loadResources();
@@ -173,7 +175,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
 
     // If no person is detected, return without updating the canvas
     if (!segmentation || segmentation.allPoses.length === 0) {
-      console.warn("No person detected. Keeping last frame.");
+      console.warn('No person detected. Keeping last frame.');
       return;
     }
   
@@ -276,8 +278,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     if (!canvasRef.current) return;
   
     // Check if captureStream is supported
-    if (typeof canvasRef.current.captureStream !== "function") {
-      alert("Recording is not supported on this browser.");
+    if (typeof canvasRef.current.captureStream !== 'function') {
+      alert('Recording is not supported on this browser.');
       return;
     }
   
@@ -286,10 +288,17 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   
     const stream = canvasRef.current.captureStream(30);
   
-    // Check MediaRecorder MIME support
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ? "video/webm;codecs=vp9"
-      : "video/webm";
+    // Check MIME type support for different browsers
+    let mimeType = '';
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      mimeType = 'video/webm;codecs=vp9';
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      mimeType = 'video/mp4';
+    } else {
+      alert('Recording is not supported on this browser.');
+      return;
+    }
+    setVideoType(mimeType);
   
     try {
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -300,28 +309,24 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       };
   
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "video/webm" });
+        const blob = new Blob(chunks, { type: mimeType });
         setVideoUrl(URL.createObjectURL(blob));
         setIsRecording(false);
         setIsTakeMedia(false);
   
         // Convert Blob to File for upload
-        const fileUpload = new File(
-          [blob],
-          `${artistName}-video.webm`,
-          { type: "video/webm" }
-        );
+        const fileUpload = new File([blob], `${artistName}-video.${mimeType.split('/')[1]}`, { type: mimeType });
         setFileUpload(fileUpload);
       };
   
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
     } catch (error) {
-      console.error("Error starting media recorder:", error);
-      alert("Recording is not supported on this browser.");
+      console.error('Error starting media recorder:', error);
+      alert('Recording is not supported on this browser.');
     }
-  };  
-
+  };
+  
   // Stop Video Recording
   const stopRecording = () => {
     if (mediaRecorderRef.current) {
@@ -401,7 +406,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         <div>
           {videoUrl && (
             <video controls autoPlay loop width='100%'>
-              <source src={videoUrl} type='video/webm' />
+              <source src={videoUrl} type={isIOS || videoType.includes('mp4') ? 'video/mp4' : 'video/webm'} />
             </video>
           )}
           {capturedMedia && (
