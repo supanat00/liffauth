@@ -274,32 +274,53 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   // Start Video Recording (Includes PNG Overlay)
   const startRecording = () => {
     if (!canvasRef.current) return;
-
+  
+    // Check if captureStream is supported
+    if (typeof canvasRef.current.captureStream !== "function") {
+      alert("Recording is not supported on this browser.");
+      return;
+    }
+  
     setIsRecording(true);
     setIsTakeMedia(true);
-
+  
     const stream = canvasRef.current.captureStream(30);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    let chunks: Blob[] = [];
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      setVideoUrl(URL.createObjectURL(blob));
-      setIsRecording(false);
-      setIsTakeMedia(false);
-
-      // Convert Blob to File for upload
-      const fileUpload = new File([blob], `${artistName}-video.webm`, { type: 'video/webm' });
-      setFileUpload(fileUpload);
-    };
-
-    mediaRecorderRef.current = mediaRecorder;
-    mediaRecorder.start();
-  };
+  
+    // Check MediaRecorder MIME support
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : "video/webm";
+  
+    try {
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      let chunks: Blob[] = [];
+  
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+  
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        setVideoUrl(URL.createObjectURL(blob));
+        setIsRecording(false);
+        setIsTakeMedia(false);
+  
+        // Convert Blob to File for upload
+        const fileUpload = new File(
+          [blob],
+          `${artistName}-video.webm`,
+          { type: "video/webm" }
+        );
+        setFileUpload(fileUpload);
+      };
+  
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+    } catch (error) {
+      console.error("Error starting media recorder:", error);
+      alert("Recording is not supported on this browser.");
+    }
+  };  
 
   // Stop Video Recording
   const stopRecording = () => {
