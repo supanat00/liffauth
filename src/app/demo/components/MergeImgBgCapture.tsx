@@ -320,7 +320,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistName }) => 
                 <Icon type='retake' />
               </button>
               <p className='text-xs'>Retake</p>
-              <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
+              <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} videoType='' uploadMedia={fileUpload} artistName={artistName} />
             </>
           )}
         </div>
