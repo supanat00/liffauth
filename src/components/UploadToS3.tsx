@@ -32,6 +32,35 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
     }
   }, [user, params]);
 
+  const handleDownload = async () => {
+    if(!downloadMedia) return;
+    if(uploadMedia) uploadToS3(uploadMedia);
+  
+    // Fetch the media as a Blob (works for both images and videos)
+    try {
+      const response = await fetch(downloadMedia);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Determine file extension based on MIME type
+      const fileExtension = blob.type.includes('image') ? 'png' : (videoType?.includes('mp4') ? 'mp4' : 'webm');
+      const fileName = `${artistName}-download.${fileExtension}`;
+  
+      // Create an anchor tag dynamically
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+  
+      // Revoke blob URL after download to free memory
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };  
+
   const uploadToS3 = async (file: File) => {
     if(params?.consent) {
       try {
@@ -63,9 +92,7 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
   return (
     <>
     <a className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-    href={(downloadMedia ? downloadMedia : '')}
-    download={`${artistName}-${downloadMedia?.includes('data:image') ? 'image.png' : (videoType?.includes('mp4') ? 'video.mp4' : 'video.webm')}`}
-    onClick={() => { if(uploadMedia) uploadToS3(uploadMedia) }}
+    onClick={handleDownload}
     >
       <Icon type='save' />
     </a>
