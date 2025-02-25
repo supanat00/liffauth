@@ -17,9 +17,10 @@ interface MediaProps {
   downloadMedia: string | null;
   uploadMedia: File | null;
   artistName: string;
+  videoType: string;
 }
 
-export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, artistName }) => {  
+export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, uploadMedia, artistName }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
   const { user } = useUser(); // ดึงข้อมูลผู้ใช้จาก Context
   const { params } = useRouteParams();
@@ -63,7 +64,7 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
     <>
     <a className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
     href={(downloadMedia ? downloadMedia : '')}
-    download={`${artistName}-${downloadMedia?.includes('data:image') ? 'image.png' : 'video.webm'}`}
+    download={`${artistName}-${downloadMedia?.includes('data:image') ? 'image.png' : (videoType?.includes('mp4') ? 'video.mp4' : 'video.webm')}`}
     onClick={() => { if(uploadMedia) uploadToS3(uploadMedia) }}
     >
       <Icon type='save' />

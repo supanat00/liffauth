@@ -442,7 +442,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           }
           {/* Retake button */}
           {(capturedMedia || videoUrl) && !isTakeMedia && (
-            <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
+            <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} videoType={videoType} uploadMedia={fileUpload} artistName={artistName} />
           )}
         </div>
         <div className='py-3'>
