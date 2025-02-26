@@ -33,20 +33,40 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
   }, [user, params]);
 
   const handleDownload = async () => {
-    if(!downloadMedia) return;
-    if(uploadMedia) uploadToS3(uploadMedia);
+    if (!downloadMedia) return;
   
-    // Fetch the media as a Blob (works for both images and videos)
+    // Upload media if provided
+    if (uploadMedia) {
+      uploadToS3(uploadMedia);
+    }
+  
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  
     try {
       const response = await fetch(downloadMedia);
       const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      // Determine file extension based on MIME type
       const fileExtension = blob.type.includes('image') ? 'png' : (videoType?.includes('mp4') ? 'mp4' : 'webm');
       const fileName = `${artistName}-download.${fileExtension}`;
   
-      // Create an anchor tag dynamically
+      // iOS Fix: Convert Blob to File URL and Open in a New Tab
+      if (isIOS) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+  
+      // Non-iOS: Use Blob URL for direct download
+      const blobUrl = URL.createObjectURL(blob);
+  
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = fileName;
@@ -54,13 +74,12 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
       a.click();
       document.body.removeChild(a);
   
-      // Revoke blob URL after download to free memory
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Error downloading file:', error);
     }
-  };  
-
+  };
+  
   const uploadToS3 = async (file: File) => {
     if(params?.consent) {
       try {
