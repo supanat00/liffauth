@@ -40,7 +40,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const [isTakeMedia, setIsTakeMedia] = useState(true);
   const [type, setType] = useState<string | null>(null);
   const [fileUpload, setFileUpload] = useState<File | null>(null);
-  const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [artistName, setArtistName] = useState<string>('');
@@ -267,7 +267,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         URL.revokeObjectURL(url);
 
         const imageSrc = tempCanvas.toDataURL('image/png');
-        setCapturedMedia(imageSrc);
+        setImageUrl(imageSrc);
         setIsTakeMedia(false);
       }, 'image/png');
     }, 50);
@@ -337,7 +337,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
 
   // Retake Media
   const retakeMedia = async () => {
-    setCapturedMedia(null);
+    setImageUrl(null);
     setVideoUrl(null);
     setIsTakeMedia(true);
     setIsRecording(false);
@@ -409,8 +409,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
               <source src={videoUrl} type={isIOS || videoType.includes('mp4') ? 'video/mp4' : 'video/webm'} />
             </video>
           )}
-          {capturedMedia && (
-            <img src={capturedMedia || ''} alt='Captured' />
+          {imageUrl && (
+            <img src={imageUrl || ''} alt='Captured' />
           )}
         </div>
       </>
@@ -420,7 +420,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
       <div className='grid grid-cols-3 gap-4'>
         <div className='py-3'>
           {/* Retake button */}
-          {(capturedMedia || videoUrl) && !isTakeMedia && (
+          {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
               <button
               className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
@@ -441,15 +441,15 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
             </button>
           }
           {/* Retake button */}
-          {(capturedMedia || videoUrl) && !isTakeMedia && (
-            <UploadToS3 downloadMedia={(capturedMedia ? capturedMedia : videoUrl)} videoType={videoType} uploadMedia={fileUpload} artistName={artistName} />
+          {(imageUrl || videoUrl) && !isTakeMedia && (
+            <UploadToS3 downloadMedia={(imageUrl ? imageUrl : videoUrl)} videoType={videoType} uploadMedia={fileUpload} artistName={artistName} />
           )}
         </div>
         <div className='py-3'>
           {isTakeMedia && !isRecording &&
             <Toggle type={type} emitValue={handleTypeEmit} />
           }
-          {(capturedMedia || videoUrl) && !isTakeMedia && (
+          {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
               <button
               className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
