@@ -12,8 +12,6 @@ interface MediaCaptureProps {
   artistId: number;
 }
 
-const solidWhiteColor = '#ffffff'; // White background
-const solidPinkColor = '#ffb3c3'; // Soft pink background
 const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/standard${String(i).padStart(4, '0')}.png`);
 const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
 
@@ -193,10 +191,6 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     ctx.scale(-1, 1);
     ctx.translate(-canvas.width, 0);
   
-    // **DRAW SOLID BACKGROUND COLOR**
-    ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
     // **DRAW VIDEO PREVIEW (SCALED & POSITIONED)**
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(video, xOffset, yOffset, videoWidth, videoHeight); // Use adjusted video size
@@ -213,11 +207,6 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     // **DRAW MASK OVER VIDEO**
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(maskCanvas, xOffset, yOffset, videoWidth, videoHeight);
-  
-    // **DRAW SOLID COLOR BEHIND PERSON**
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = isSecret ? solidWhiteColor : solidPinkColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
   
     // **RESET TRANSFORMATION**
     ctx.restore();
@@ -414,7 +403,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           )}
         </div>
       </>
-      
+      <>1</>
       {(isProcessingReady && bodyPixModel && pngFrames) && <>
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4'>
