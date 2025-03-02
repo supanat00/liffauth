@@ -17,10 +17,9 @@ interface MediaProps {
   downloadMedia: string | null;
   uploadMedia: File | null;
   artistName: string;
-  videoType: string;
 }
 
-export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, uploadMedia, artistName }) => {  
+export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, artistName }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
   const { user } = useUser(); // ดึงข้อมูลผู้ใช้จาก Context
   const { params } = useRouteParams();
@@ -34,52 +33,40 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
 
   const handleDownload = async () => {
     if (!downloadMedia) return;
-  
-    // Upload media if provided
-    if (uploadMedia) {
-      uploadToS3(uploadMedia);
-    }
-  
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  
+
+    if (uploadMedia) uploadToS3(uploadMedia);
+
     try {
       const response = await fetch(downloadMedia);
       const blob = await response.blob();
-      const fileExtension = blob.type.includes('image') ? 'png' : (videoType?.includes('mp4') ? 'mp4' : 'webm');
+
+      // Determine file extension
+      const fileExtension = blob.type.includes('image') ? 'png' : 'mp4';
+      const mimeType = blob.type.includes('image') ? 'image/png' : 'video/mp4';
       const fileName = `${artistName}-download.${fileExtension}`;
-  
-      // iOS Fix: Convert Blob to File URL and Open in a New Tab
-      if (isIOS) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          const a = document.createElement('a');
-          a.href = dataUrl;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        };
-        reader.readAsDataURL(blob);
-        return;
-      }
-  
-      // Non-iOS: Use Blob URL for direct download
-      const blobUrl = URL.createObjectURL(blob);
-  
+
+      // Set image and video
+      const file = new File([blob], fileName, { type: mimeType });
+
       const a = document.createElement('a');
-      a.href = blobUrl;
+      a.href = URL.createObjectURL(file);
       a.download = fileName;
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-  
-      URL.revokeObjectURL(blobUrl);
+      
+      // Check if Web Share API supports file sharing
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+        });
+        console.log("File shared successfully!");
+      } else {
+        alert("Sharing is not supported on this browser.");
+      }
     } catch (error) {
-      console.error('Error downloading file:', error);
+      console.error("Error sharing file:", error);
     }
   };
-  
+
   const uploadToS3 = async (file: File) => {
     if(params?.consent) {
       try {
@@ -117,8 +104,8 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, videoType, upl
     </a>
     <p className='text-xs mt-1 ml-[-10px]'>{
       !fileUploadStatus ?
-      (params?.consent ? 'Save & Share' : 'Save') :
-      (params?.consent ? 'Uploading...' : 'Save')
+      (params?.consent ? 'Save & Share' : 'Save & Share') :
+      (params?.consent ? 'Uploading...' : 'Save & Share')
     }</p>
     </>
   );

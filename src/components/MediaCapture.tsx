@@ -27,6 +27,8 @@ const cameraHeight = 533; // Maintain 9:16 ratio
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+const customBg = '/img/test-bg.png';
+
 const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -43,6 +45,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [artistName, setArtistName] = useState<string>('');
   const [videoType, setVideoType] = useState<string>('');
+  const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
+  const [isBgLoaded, setIsBgLoaded] = useState(false);
 
   useEffect(() => {
     loadResources();
@@ -53,6 +57,15 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const loadResources = async () => {
     const model = await bodyPix.load();
     setBodyPixModel(model);
+
+    // Load custom background image
+    const bgImage = new Image();
+    bgImage.src = customBg; // Replace with actual URL
+    bgImage.onload = () => {
+      // Save the background in state
+      setCustomBgImage(bgImage);
+      setIsBgLoaded(true);
+    };
   
     const video = videoRef.current;
     if (video) {
@@ -70,7 +83,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
         setIsProcessingReady(true);
       };
     }
-  };  
+  };
   
   useEffect(() => {
     loadResources();
@@ -219,6 +232,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     }
   
     frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
+
+    // **DRAW STATIC BACKGROUND FIRST**
+    if (customBgImage && isBgLoaded) {
+      ctx.globalCompositeOperation = 'destination-over'; // Ensure normal drawing mode
+      ctx.drawImage(customBgImage, 0, 0, canvas.width, canvas.height);
+    }
   };
   
   useEffect(() => {
@@ -403,7 +422,6 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           )}
         </div>
       </>
-      <>1</>
       {(isProcessingReady && bodyPixModel && pngFrames) && <>
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4'>
@@ -431,7 +449,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
           }
           {/* Retake button */}
           {(imageUrl || videoUrl) && !isTakeMedia && (
-            <UploadToS3 downloadMedia={(imageUrl ? imageUrl : videoUrl)} videoType={videoType} uploadMedia={fileUpload} artistName={artistName} />
+            <UploadToS3 downloadMedia={(imageUrl ? imageUrl : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
           )}
         </div>
         <div className='py-3'>
