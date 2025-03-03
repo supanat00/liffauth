@@ -48,25 +48,18 @@ const AppContent = () => {
 
   return (
     <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>
-      <Random />
+      {userId && consent && age && artistId ?
+        <Random /> :
+        <p>Please scan bottle.</p>
+      }
     </section>
   );
 };
 
 const App = () => {
-  const searchParams = useSearchParams();
-  
-  const userId = searchParams.get('userid') || null;
-  const consent = searchParams.get('consent') || null;
-  const age = searchParams.get('age') || null;
-  const artistId = searchParams.get('artistId') || null;
-
   return (
     <Suspense fallback={<div className='relative flex flex-col items-center justify-center bg-backgroundImg'>Loading...</div>}>
-      {userId && consent && age && artistId ?
-        <AppContent /> :
-        <div className='relative flex flex-col items-center justify-center bg-backgroundImg'>Please scan bottle.</div>
-      }
+      <AppContent /> 
     </Suspense>
   );
 };
