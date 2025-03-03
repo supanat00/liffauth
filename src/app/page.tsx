@@ -42,7 +42,6 @@ const AppContent = () => {
     const iv = CryptoJS.enc.Utf8.parse(ivString);
     const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
     const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
-    console.log(bytes.toString(CryptoJS.enc.Utf8));
     return bytes.toString(CryptoJS.enc.Utf8);
   }
 
