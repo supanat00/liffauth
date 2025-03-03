@@ -31,22 +31,8 @@ const Toggle: React.FC<ToggleProps> = ({ type, emitValue }) => {
           className='sr-only'
           onClick={() => emitValue(isChecked)}
         />
-        <div className='shadow-card flex h-[46px] w-[82px] items-center justify-center rounded-md bg-white'>
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded ${
-              !isChecked ? 'bg-blue-500 text-white' : 'text-body-color'
-            }`}
-          >
-            <Icon type='camera' />
-          </span>
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded ${
-              isChecked ? 'bg-blue-500 text-white' : 'text-body-color'
-            }`}
-          >
-            <Icon type='video' />
-          </span>
-        </div>
+        {!isChecked && <Icon type='cameraImg' />}
+        {isChecked && <Icon type='videoImg' />}
       </label>
     </>
   )

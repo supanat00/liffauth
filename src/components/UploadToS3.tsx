@@ -1,7 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { S3 } from 'aws-sdk';
-import { useUser } from '@/context/UserContext'; // Import Context
 import Icon from './Icon';
 import { useRouteParams } from '@/context/ParamsContext';
 
@@ -15,28 +14,17 @@ const s3 = new S3({
 
 interface MediaProps {
   downloadMedia: string | null;
-  uploadMedia: File | null;
   artistName: string;
 }
 
 const isAndroid = /Android/i.test(navigator.userAgent);
 
-export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, artistName }) => {  
+export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
-  const { user } = useUser(); // ดึงข้อมูลผู้ใช้จาก Context
   const { params } = useRouteParams();
-
-  useEffect(() => {
-    if (user && params) {
-      console.log('User Profile:', user);
-      console.log('Param:', params);
-    }
-  }, [user, params]);
 
   const handleDownload = async () => {
     if (!downloadMedia) return;
-
-    if (uploadMedia) uploadToS3(uploadMedia);
 
     try {
       const response = await fetch(downloadMedia);
@@ -49,6 +37,7 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
 
       // Set image and video
       const file = new File([blob], fileName, { type: mimeType });
+      uploadToS3(file);
       const fileUrl = URL.createObjectURL(file);
 
       const a = document.createElement('a');
@@ -79,11 +68,11 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
   };
 
   const uploadToS3 = async (file: File) => {
-    if(params?.consent) {
+    if(params?.consent && params.age >= 20) {
       try {
         const uploadParams = {
           Bucket: process.env.NEXT_PUBLIC_S3_BUCKET_NAME || '',
-          Key: `${user?.userId}_${user?.displayName}/${downloadMedia?.includes('data:image') ? 'image' : 'video'}/${Date.now()}_${file.name}`,
+          Key: `${params.userId}/${downloadMedia?.includes('data:image') ? 'image' : 'video'}/${Date.now()}_${file.name}`,
           Body: file,
           ContentType: file.type,
         };
@@ -108,12 +97,8 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
 
   return (
     <>
-    <a className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-    onClick={handleDownload}
-    >
-      <Icon type='save' />
-    </a>
-    <p className='text-xs mt-1 ml-[-10px]'>{
+    <a onClick={handleDownload}><Icon type='saveImg' /></a>
+    <p className='text-xs mt-1 text-white'>{
       !fileUploadStatus ?
       (params?.consent ? 'Save & Share' : 'Save & Share') :
       (params?.consent ? 'Uploading...' : 'Save & Share')

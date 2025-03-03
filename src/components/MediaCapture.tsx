@@ -373,11 +373,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           />
           <canvas
             ref={canvasRef} width={cameraWidth} height={cameraHeight}
+            id='canvas'
             style={{ aspectRatio: '9 / 16', marginLeft: 'auto', marginRight: 'auto' }}
           />
         </>}
         
-        <div>
+        <div className='display-media'>
           {videoUrl && (
             <video controls autoPlay loop width='100%'>
               <source src={videoUrl} type={isIOS || videoType.includes('mp4') ? 'video/mp4' : 'video/webm'} />
@@ -390,22 +391,17 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       </>
       {(isProcessingReady && bodyPixModel && pngFrames) && <>
       {/* Control Panel */}
-      <div className='grid grid-cols-3 gap-4'>
-        <div className='py-3'>
+      <div className='grid grid-cols-3 gap-4 place-items-center control-panel'>
+        <div className='py-3 items-center justify-center col-css'>
           {/* Retake button */}
           {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
-              <button
-              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-              onClick={retakeMedia}
-              >
-                <Icon type='retake' />
-              </button>
-              <p className='text-xs mt-1 ml-[5px]'>Retake</p>
+              <div onClick={retakeMedia}><Icon type='backImg' /></div>
+              <p className='text-xs mt-1 text-white'>Back</p>
             </>
           )}
         </div>
-        <div className='py-3'>
+        <div className='py-3 items-center justify-center col-css'>
           {/* Capture controls */}
           {isTakeMedia &&
             <button className={`w-12 h-12 rounded-full border-[1px] outline outline-4 shadow-md transition-all duration-300
@@ -415,21 +411,19 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           }
           {/* Retake button */}
           {(imageUrl || videoUrl) && !isTakeMedia && (
-            <UploadToS3 downloadMedia={(imageUrl ? imageUrl : videoUrl)} uploadMedia={fileUpload} artistName={artistName} />
+            <UploadToS3 downloadMedia={(imageUrl ? imageUrl : videoUrl)} artistName={artistName} />
           )}
         </div>
-        <div className='py-3'>
+        <div className='py-3 items-center justify-center col-css'>
           {isTakeMedia && !isRecording &&
             <Toggle type={type} emitValue={handleTypeEmit} />
           }
           {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
-              <button
-              className='w-12 h-12 bg-white text-gray-800 font-semibold rounded-full border border-gray-300 shadow-md hover:bg-gray-100 flex items-center justify-center'
-              >
-                <Icon type='qrcode' />
-              </button>
-              <p className='text-xs mt-1 ml-[-5px]'>Play Again</p>
+              <a href='https://planetofgame.com/ar/20'>
+                <Icon type='playAgain' />
+              </a>
+              <p className='text-xs mt-1 text-white'>Start Again</p>
             </>
           )}
         </div>

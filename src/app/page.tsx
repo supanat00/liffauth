@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-static';  // Ensure static export
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import Random from '@/components/Random';
 
 import CryptoJS from 'crypto-js';
@@ -18,14 +18,14 @@ import { useSearchParams } from 'next/navigation';
 // &age= // <20
 // &artistId=2';
 
-const App = () => {
+const AppContent = () => {
   const { params, setParams } = useRouteParams();
   const searchParams = useSearchParams();
   
-  const userid = searchParams.get('userid');
-  const consent = searchParams.get('consent');
-  const age = searchParams.get('age');
-  const artistId = searchParams.get('artistId');
+  const userid = searchParams.get('userid') || null;
+  const consent = searchParams.get('consent') || null;
+  const age = searchParams.get('age') || null;
+  const artistId = searchParams.get('artistId') || null;
 
   useEffect(() => {
     setParams({
@@ -49,6 +49,14 @@ const App = () => {
     <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>
       <Random />
     </section>
+  );
+};
+
+const App = () => {
+  return (
+    <Suspense fallback={<div className='relative flex flex-col items-center justify-center bg-backgroundImg'>Loading...</div>}>
+      <AppContent />
+    </Suspense>
   );
 };
 

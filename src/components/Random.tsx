@@ -5,7 +5,7 @@ import MediaCapture from './MediaCapture';
 
 const normalFrames = Array.from({ length: 75 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
 const secretFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
-const congratsFrames = Array.from({ length: 28 }, (_, i) => `/frame/png-seq/congrat-secret/Comp 4_${String(i).padStart(5, '0')}.png`);
+const congratsFrames = Array.from({ length: 20 }, (_, i) => `/frame/png-seq/congrat-secret/congrat${String(i).padStart(4, '0')}.png`);
 
 const Random = () => {
   const [frames, setFrames] = useState<string[]>([]);

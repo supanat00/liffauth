@@ -29,3 +29,42 @@ video {
   max-height: 600px; /* Avoid overflow */
 }
 
+.toggle-img {
+  width: auto;
+  height: 55px;
+}
+
+.icon-img {
+  width: 55px;
+  height: 55px;
+}
+
+.col-css p {
+  text-align: center;
+}
+
+.col-css img {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  #canvas {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    margin-top: -20%;
+  }
+  
+  .control-panel {
+    position: absolute;
+    bottom: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  .display-media {
+    margin-top: -20%;
+  }
+}
