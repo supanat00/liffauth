@@ -2,8 +2,9 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface RouteParams {
-  userId: string;
+  userId: string | null;
   consent: boolean;
+  age: number;
   artistId: number;
 }
 

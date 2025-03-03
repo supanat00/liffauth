@@ -2,192 +2,53 @@
 
 export const dynamic = 'force-static';  // Ensure static export
 
-import React, { useEffect, useState } from 'react';
-import { useUser } from '@/context/UserContext';
+import React, { useEffect } from 'react';
 import Random from '@/components/Random';
 
 import CryptoJS from 'crypto-js';
 import { useRouteParams } from '@/context/ParamsContext';
+import { useSearchParams } from 'next/navigation';
 
-const key = 'd679a343c839d29c8321cd3a469c381b94b7daa22cf99dfd32492f149477d515';
-const iv = '740a01a4ee6dc01cc9e254a7543a22e7';
+// https://nestle-project-61016.web.app/?userid=U2FsdGVkX19tslTlS0bcOKfrnkvtZDubYGk7e60rdYM3kFCUvYC3QMr7YoX/Vpfy&consent=aX/PhJj+W7DHLjVQ9Rrk3Q==&age=U2FsdGVkX1+zfEhVD1MNDbSXI0oKIHYTVdLbzD7A8r0=&artistId=2
+// userid=U2FsdGVkX19tslTlS0bcOKfrnkvtZDubYGk7e60rdYM3kFCUvYC3QMr7YoX/Vpfy
+// &consent=U2FsdGVkX1+fV3lzwtKKLeczfw1uEeNejMw9qDo0OA0 // true
+// &consent=aX/PhJj+W7DHLjVQ9Rrk3Q== // false
+// &age=U2FsdGVkX1+zfEhVD1MNDbSXI0oKIHYTVdLbzD7A8r0= // >20 (26)
+// &age= // 20
+// &age= // <20
+// &artistId=2';
 
-const url = 'U2FsdGVkX1+cpJdYfqdyJFCdLnIXgeC5fFA6dS1600k=';
-// https://planetofgame.com/urltest/index.html?userid=U2FsdGVkX1/Ahags8CFx5e0neFbscahGWiJSlZFH/pB1DHCeT5ws9mSZWiEjnSaf&consent=U2FsdGVkX1+cpJdYfqdyJFCdLnIXgeC5fFA6dS1600k=
-
-export default function App() {
-  // const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
-  // const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // const { user, setUser } = useUser();
+const App = () => {
   const { params, setParams } = useRouteParams();
-
-  // // Initialize LIFF
-  // useEffect(() => {
-  //   const loadLiff = async () => {
-  //     const liffModule = await import('@line/liff');
-  //     const liffInstance = liffModule.default;
-  //     try {
-  //       if (!liffId) {
-  //         throw new Error('LIFF ID is missing');
-  //       }
-  //       await liffInstance.init({ liffId });
-
-  //       if (liffInstance.isLoggedIn()) {
-  //         setIsLoggedIn(true);
-  //         const profile = await liffInstance.getProfile();
-  //         // console.log(profile, profile.userId);
-  //         setUser({ displayName: profile.displayName, userId: profile.userId });
-  //       } else {
-  //         liffInstance.login();
-  //       }
-  //     } catch (error) {
-  //       console.error(
-  //         'LIFF initialization error:',
-  //         error instanceof Error ? error.message : error
-  //       );
-  //     }
-  //   };
-
-  //   loadLiff();
-  // }, [liffId, setUser]);
-
-  // // Logout handler
-  // const handleLogout = async () => {
-  //   const liffModule = await import('@line/liff');
-  //   liffModule.default.logout();
-  //   setIsLoggedIn(false);
-
-  //   // Optionally reload the page after logout
-  //   window.location.reload();
-  // };
-
-  // if (!isLoggedIn) {
-  //   return (
-  //     <div className='flex justify-center items-center w-full h-screen'>
-  //       <p>กำลังเข้าสู่ระบบ...</p>
-  //     </div>
-  //   );
-  // }
+  const searchParams = useSearchParams();
+  
+  const userid = searchParams.get('userid');
+  const consent = searchParams.get('consent');
+  const age = searchParams.get('age');
+  const artistId = searchParams.get('artistId');
 
   useEffect(() => {
-    // let code = decryptAES(url);
-    // console.log(code);
-    setParams({ userId: 'TEST', consent: false, artistId: 1 });
+    setParams({
+      userId: userid ? decrypt(userid) : null,
+      consent: consent ? decrypt(consent).toLowerCase() === 'true' : false,
+      age: age ? Number(decrypt(age)) : 0,
+      artistId: Number(artistId)
+    });
   }, [setParams]);
 
-  // const decryptAES = (encryptedData: string) => {
-  //   const key = process.env.NEXT_PUBLIC_key || '';
-  //   const iv = process.env.NEXT_PUBLIC_iv || '';
-  //   const bytes = CryptoJS.AES.decrypt(encryptedData, key, { iv, mode: CryptoJS.mode.CBC });
-  //   return bytes.toString(CryptoJS.enc.Utf8);
-  // }
-
-  return (
-    <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>
-      {/* Logout button at top-right */}
-      {/* <button
-        onClick={handleLogout}
-        className='absolute top-4 right-4 z-[10000] px-4 py-2 text-xl font-bold text-white bg-red-600 rounded'
-      >
-        Logout
-      </button> */}
-
-      {/* Display user profile info */}
-      {/* <section className='mt-8'>
-        <h1 className='text-3xl font-bold'>Welcome</h1>
-        <p className='mt-2'>Name: {user?.displayName}</p>
-      </section> */}
-      <Random />
-
-    </section>
-  );
-}
-
-
-
-// Mobile Only
-
-{/* 
-'use client';
-
-import { useEffect, useState } from 'react';
-import Menu from '@/components/menu';
-
-export default function App() {
-  // ถ้าไม่ได้กำหนด liffId จะใช้ค่าเป็น string ว่าง
-  const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '';
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // const [isInLine, setIsInLine] = useState(false);
-  // สถานะการเปิดใน LINE
-
-  useEffect(() => {
-    const loadLiff = async () => {
-      const liff = (await import('@line/liff')).default;
-      try {
-        // ตรวจสอบว่าแอปอยู่ใน LINE Webview โดยการตรวจสอบ userAgent
-        // const userAgent = window.navigator.userAgent;
-        // if (!userAgent.includes('Line')) {
-        //   setIsInLine(false); // หากไม่อยู่ใน LINE Webview
-        //   return; // หยุดการทำงาน
-        // } else {
-        //   setIsInLine(true); // หากอยู่ใน LINE Webview
-        // }
-
-        // ตรวจสอบว่า liffId มีค่าไหม
-        // if (!liffId) {
-        //   throw new Error('LIFF ID is missing');
-        // }
-
-        // เริ่มต้น LIFF
-        await liff.init({ liffId });
-        const profile = await liff.getProfile()
-        console.log(profile, profile.userId)
-
-        // ตรวจสอบสถานะการล็อกอิน
-        if (liff.isLoggedIn()) {
-          setIsLoggedIn(true); // หากล็อกอินแล้ว
-        } else {
-          liff.login(); // หากยังไม่ได้ล็อกอิน ให้ทำการล็อกอิน
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          console.error('LIFF initialization error:', error.message); // ตรวจสอบประเภทของ error
-        } else {
-          console.error('Unknown error during LIFF initialization');
-        }
-      }
-    };
-
-    loadLiff();
-  }, [liffId]);
-  // เพิ่ม liffId ใน dependency เพื่อให้ทำงานทุกครั้งที่ค่า liffId เปลี่ยนแปลง
-
-  // หากไม่อยู่ใน LINE Webview ให้แสดงข้อความว่า 'โปรดเปิดแอปใน LINE' และเพิ่มลิงก์ให้เปิดแอป LINE
-  // if (!isInLine) {
-  //   return (
-  //     <div className='flex justify-center items-center w-full h-screen'>
-  //       <p>
-  //         โปรดเปิดแอปใน LINE
-  //         <a href='https://line.me/ti/p/@256cnraq' className='text-blue-500 underline ml-2'>
-  //           เปิดแอป LINE
-  //         </a>
-  //       </p>
-  //     </div>
-  //   );
-  // }
-
-  if (!isLoggedIn) {
-    return (
-      <div className='flex justify-center items-center w-full h-screen'>
-        <p>กำลังเข้าสู่ระบบ...</p>
-      </div>
-    );
+  const decrypt = (encryptedData: string) => {
+    const key = process.env.NEXT_PUBLIC_key || '';
+    const iv = process.env.NEXT_PUBLIC_iv || '';
+    const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
+    const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv, mode: CryptoJS.mode.CBC });
+    return bytes.toString(CryptoJS.enc.Utf8);
   }
 
   return (
-    <section className='relative flex justify-center items-center bg-backgroundImg bg-repeat bg-cover bg-bottom w-full h-screen p-4'>
-      <Menu />
+    <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>
+      <Random />
     </section>
   );
-}
-*/}
+};
+
+export default App;

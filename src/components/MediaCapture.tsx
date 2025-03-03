@@ -6,14 +6,12 @@ import UploadToS3 from '@/components/UploadToS3';
 import Toggle from '@/components/Toggle';
 
 import artists from '../../public/artist.json';
+import { useRouteParams } from '@/context/ParamsContext';
+import { artistsFrame } from '@/const/artistsFrame';
 
 interface MediaCaptureProps {
   isSecret: boolean;
-  artistId: number;
 }
-
-const frameNormal = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/normal/standard${String(i).padStart(4, '0')}.png`);
-const frameSecret = Array.from({ length: 30 }, (_, i) => `/frame/png-seq/secret/khunpol/secret layer 1${String(i).padStart(4, '0')}.png`);
 
 // Set PNG Frame Size  9:16 Aspect Ratio)
 const frameWidth = 300;
@@ -27,9 +25,7 @@ const cameraHeight = 533; // Maintain 9:16 ratio
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-const customBg = '/img/test-bg.png';
-
-const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
+const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [bodyPixModel, setBodyPixModel] = useState<bodyPix.BodyPix | null>(null);
@@ -47,11 +43,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   const [videoType, setVideoType] = useState<string>('');
   const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
   const [isBgLoaded, setIsBgLoaded] = useState(false);
+  const { params } = useRouteParams();
 
   useEffect(() => {
     loadResources();
-    let name = artists.find(artist => artist.artistId === artistId)?.artistName;
-    setArtistName(name || 'NORMAL');
+    const name = artists.find(artist => artist.artistId === params?.artistId)?.artistName;
+    setArtistName(name || 'N/A');
   }, []);
 
   const loadResources = async () => {
@@ -59,6 +56,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     setBodyPixModel(model);
 
     // Load custom background image
+    const customBg = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistBgFrame || '';
     const bgImage = new Image();
     bgImage.src = customBg; // Replace with actual URL
     bgImage.onload = () => {
@@ -90,6 +88,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
   }, []);
 
   useEffect(() => {
+    const frameNormal = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistNormalFrame || [];
+    const frameSecret = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artisSecretFrame || [];
     const loadImages = async () => {
       const images = await Promise.all(
         (isSecret ? frameSecret : frameNormal).map((src) => {
@@ -127,43 +127,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret, artistId }) => {
     const videoWidth = previewWidth * videoScale; // Reduce video size
     const videoHeight = previewHeight * videoScale;
   
-    // **DYNAMIC POSITION BASED ON `isSecret`**
-    let horizontalPosition = isSecret ? 'left' : 'center'; // 'left', 'center', 'right'
-    let verticalPosition = isSecret ? 'bottom' : 'top'; // 'top', 'center', 'bottom'
-  
-    let xOffset, yOffset;
-  
-    // **Compute X Position (Horizontal) with Fallback**
-    if (previewWidth > canvas.width) {
-      horizontalPosition = 'center'; // Fallback if too large
-    }
-    switch (horizontalPosition) {
-      case 'left':
-        xOffset = 0;
-        break;
-      case 'right':
-        xOffset = canvas.width - videoWidth;
-        break;
-      default: // 'center'
-        xOffset = (canvas.width - videoWidth) / 2;
-        break;
-    }
-  
-    // **Compute Y Position (Vertical) with Fallback**
-    if (previewHeight > canvas.height) {
-      verticalPosition = 'center'; // Fallback if too large
-    }
-    switch (verticalPosition) {
-      case 'top':
-        yOffset = 0;
-        break;
-      case 'bottom':
-        yOffset = canvas.height - videoHeight;
-        break;
-      default: // 'center'
-        yOffset = (canvas.height - videoHeight) / 2;
-        break;
-    }
+    // Set Camera Preview Position Center-Bottom
+    const xOffset = (canvas.width - videoWidth) / 2;
+    const yOffset = canvas.height - videoHeight;
   
     // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');

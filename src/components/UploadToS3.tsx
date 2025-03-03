@@ -19,6 +19,8 @@ interface MediaProps {
   artistName: string;
 }
 
+const isAndroid = /Android/i.test(navigator.userAgent);
+
 export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, artistName }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
   const { user } = useUser(); // ดึงข้อมูลผู้ใช้จาก Context
@@ -47,9 +49,10 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
 
       // Set image and video
       const file = new File([blob], fileName, { type: mimeType });
+      const fileUrl = URL.createObjectURL(file);
 
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(file);
+      a.href = fileUrl;
       a.download = fileName;
       a.click();
       
@@ -58,6 +61,9 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
         await navigator.share({
           files: [file],
         });
+        if(isAndroid) {
+          shareViaIntent(fileUrl);
+        }
         console.log("File shared successfully!");
       } else {
         alert("Sharing is not supported on this browser.");
@@ -65,6 +71,11 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, uploadMedia, a
     } catch (error) {
       console.error("Error sharing file:", error);
     }
+  };
+
+  const shareViaIntent = (fileUrl: string) => {
+    const encodedUrl = encodeURIComponent(fileUrl);
+    window.location.href = `intent:#Intent;action=android.intent.action.SEND;type=video/mp4;S.android.intent.extra.STREAM=${encodedUrl};end;`;
   };
 
   const uploadToS3 = async (file: File) => {
