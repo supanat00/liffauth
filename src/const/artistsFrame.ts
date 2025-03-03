@@ -30,9 +30,9 @@ export const artistsFrame = [
   {
     artistId: 5,
     artistName: 'AA',
-    artistBgFrame: '/frame/png-seq/AA/.png',
-    artistNormalFrame: Array.from({ length: 30 }, (_, i) => `/frame/png-seq/AA/AA_Standard/${String(i).padStart(4, '0')}.png`),
-    artisSecretFrame: Array.from({ length: 30 }, (_, i) => `/frame/png-seq/AA/AA_secret/${String(i).padStart(4, '0')}.png`)
+    artistBgFrame: '/frame/png-seq/AA/AA_BG.png',
+    artistNormalFrame: Array.from({ length: 30 }, (_, i) => `/frame/png-seq/AA/AA_standard/AA_Standard${String(i).padStart(4, '0')}.png`),
+    artisSecretFrame: Array.from({ length: 30 }, (_, i) => `/frame/png-seq/AA/AA_secret/AA_secret${String(i).padStart(4, '0')}.png`)
   },
   {
     artistId: 6,
