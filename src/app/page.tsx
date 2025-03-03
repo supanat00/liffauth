@@ -9,7 +9,7 @@ import CryptoJS from 'crypto-js';
 import { useRouteParams } from '@/context/ParamsContext';
 import { useSearchParams } from 'next/navigation';
 
-// https://nestle-project-61016.web.app/?userid=U2FsdGVkX19tslTlS0bcOKfrnkvtZDubYGk7e60rdYM3kFCUvYC3QMr7YoX/Vpfy&consent=aX/PhJj+W7DHLjVQ9Rrk3Q==&age=U2FsdGVkX1+zfEhVD1MNDbSXI0oKIHYTVdLbzD7A8r0=&artistId=2
+// https://nestle-project-61016.web.app/?userid=U2FsdGVkX19tslTlS0bcOKfrnkvtZDubYGk7e60rdYM3kFCUvYC3QMr7YoX/Vpfy&consent=aX/PhJj+W7DHLjVQ9Rrk3Q==&age=U2FsdGVkX1+zfEhVD1MNDbSXI0oKIHYTVdLbzD7A8r0=&artistId=1
 // userid=U2FsdGVkX19tslTlS0bcOKfrnkvtZDubYGk7e60rdYM3kFCUvYC3QMr7YoX/Vpfy
 // &consent=U2FsdGVkX1+fV3lzwtKKLeczfw1uEeNejMw9qDo0OA0 // true
 // &consent=aX/PhJj+W7DHLjVQ9Rrk3Q== // false
@@ -38,9 +38,10 @@ const App = () => {
 
   const decrypt = (encryptedData: string) => {
     const key = process.env.NEXT_PUBLIC_key || '';
-    const iv = process.env.NEXT_PUBLIC_iv || '';
+    const ivString = process.env.NEXT_PUBLIC_iv || '';
+    const iv = CryptoJS.enc.Utf8.parse(ivString);
     const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
-    const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv, mode: CryptoJS.mode.CBC });
+    const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
     return bytes.toString(CryptoJS.enc.Utf8);
   }
 
