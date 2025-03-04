@@ -82,10 +82,6 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       };
     }
   };
-  
-  useEffect(() => {
-    loadResources();
-  }, []);
 
   useEffect(() => {
     const frameNormal = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistNormalFrame || [];
@@ -359,7 +355,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     <div>
       <>
         {(!isProcessingReady || !bodyPixModel || !pngFrames) && (
-          <div className='flex flex-col items-center justify-center'>
+          <div className='flex flex-col items-center justify-center prepare-frame'>
             <span className='text-lg font-bold text-white'>🎥 Preparing frame...</span>
             <div className='w-12 h-12 border-4 border-white-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
           </div>

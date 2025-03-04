@@ -49,6 +49,11 @@ video {
   margin-right: auto;
 }
 
+.prepare-frame {
+  position: relative;
+  margin-top: 100%;
+}
+
 @media (max-width: 768px) {
   #canvas {
     width: 100vw;
