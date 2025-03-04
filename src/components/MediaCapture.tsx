@@ -120,12 +120,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     const previewWidth = canvas.width * previewScale;
     const previewHeight = canvas.height;
     const videoScale = isMobile ? 0.5 : 1;
-    const videoWidth = previewWidth * videoScale; // Reduce video size
-    const videoHeight = previewHeight * videoScale;
+    const videoWidth = previewWidth * videoScale
+    const videoHeight = previewHeight * videoScale
   
     // Set Camera Preview Position Center-Bottom
     const xOffset = (canvas.width - videoWidth) / 2;
-    const yOffset = canvas.height - videoHeight;
+    const yOffset = (canvas.height - videoHeight) - 10;
   
     // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');
