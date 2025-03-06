@@ -44,6 +44,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
   const [isBgLoaded, setIsBgLoaded] = useState(false);
   const { params } = useRouteParams();
+  const accessId = params?.accessId || '';
 
   useEffect(() => {
     loadResources();
@@ -338,17 +339,35 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const handleTypeClick = () => {
     if (type === 'photo' || type === null) {
       capturePhoto();
+      updateTransaction(accessId, 'takePhoto');
     } else {
       if(isRecording) {
         stopRecording();
       } else {
         startRecording();
+        updateTransaction(accessId, 'takeVideo');
       }
     }
   };
 
   const handleTypeEmit = (value: boolean) => {
     setType(!value ? 'video' : 'photo');
+  };
+
+  const updateTransaction = async (accessId: string, field: string) => {
+    try {
+      const response = await fetch('/api/updateTransaction', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessId, field })
+      });
+  
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+  
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+    }
   };
 
   return (

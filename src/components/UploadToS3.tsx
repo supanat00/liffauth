@@ -44,6 +44,8 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
       a.href = fileUrl;
       a.download = fileName;
       a.click();
+
+      updateTransaction(params ? params.accessId : '', 'saveAndShare', 1);
       
       // Check if Web Share API supports file sharing
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -53,7 +55,6 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
         if(isAndroid) {
           shareViaIntent(fileUrl);
         }
-        console.log("File shared successfully!");
       } else {
         alert("Sharing is not supported on this browser.");
       }
@@ -80,7 +81,6 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
         try {
           setFileUploadStatus(true);
           const result = await s3.upload(uploadParams).promise();
-          console.log('File uploaded successfully:', result);
           alert('File upload success');
           setFileUploadStatus(false);
         } catch (err) {
@@ -90,8 +90,22 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
         console.error('Error uploading file:', error);
         alert('File upload failed');
       }
-    } else {
-      console.log('Consent is FALSE, not upload.');
+    }
+  };
+
+  const updateTransaction = async (accessId: string, field: string, value: number) => {
+    try {
+      const response = await fetch('/api/updateTransaction', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessId, field, value })
+      });
+  
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+  
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
     }
   };
 

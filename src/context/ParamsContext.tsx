@@ -6,6 +6,7 @@ interface RouteParams {
   consent: boolean;
   age: number;
   artistId: number;
+  accessId: string;
 }
 
 interface ParamsContextType {
