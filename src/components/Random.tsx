@@ -12,7 +12,7 @@ const Random = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCongrats, setShowCongrats] = useState(false);
   const [showMediaCapture, setShowMediaCapture] = useState(false);
-  const [isSecret] = useState(Math.random() < 0.3); // Randomly choose normal (70%) or secret (30%)
+  const [isSecret] = useState(Math.random() < 0.2); // Randomly choose normal (70%) or secret (30%)
   const [preloadedImages, setPreloadedImages] = useState<HTMLImageElement[]>([]);
   const [isLoaded, setIsLoaded] = useState(false); // Ensures all images are preloaded
 
