@@ -5,7 +5,7 @@ export const dynamic = 'force-static';  // Ensure static export
 import React, { useEffect, Suspense } from 'react';
 import Random from '@/components/Random';
 
-import CryptoJS from 'crypto-js';
+import * as CryptoJS from 'crypto-js';
 import { useRouteParams } from '@/context/ParamsContext';
 import { useSearchParams } from 'next/navigation';
 
