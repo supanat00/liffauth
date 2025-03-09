@@ -185,13 +185,16 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     // **RESET TRANSFORMATION**
     ctx.restore();
   
+    // Set frame index based on time to ensure accurate playback
+    const totalFrames = 30; // Total frames for 0.99 sec at 30fps
+    const currentTime = (Date.now() % 990) / 990; // Normalized 0-1 time
+    frameIndex.current = Math.floor(currentTime * totalFrames) % pngFrames.length;
     // **DRAW PNG FRAME OVERLAY**
     ctx.globalCompositeOperation = 'source-over';
     const frame = pngFrames[frameIndex.current];
     if (frame) {
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-    }
-  
+    }  
     frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
 
     // **DRAW STATIC BACKGROUND FIRST**
@@ -433,7 +436,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           }
           {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
-              <a href='https://planetofgame.com/ar/20'>
+              <a href='https://planetofgame.com/ar/22'>
                 <Icon type='playAgain' />
               </a>
               <p className='text-xs mt-1 text-white'>Start Again</p>
