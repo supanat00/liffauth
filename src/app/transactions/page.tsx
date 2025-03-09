@@ -64,7 +64,7 @@ export default function TransactionsPage() {
 
   return (
     <div className='min-h-screen bg-gray-100 p-6 flex flex-col items-center'>
-      <div className='w-full max-w-6xl bg-white shadow-md rounded-lg p-6'>
+      <div className='w-full bg-white shadow-md rounded-lg p-6'>
         <h1 className='text-2xl font-semibold text-gray-800 mb-6 text-center'>Transaction Records</h1>
 
         {/* Export Button */}
