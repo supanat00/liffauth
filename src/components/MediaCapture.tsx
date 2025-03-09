@@ -13,13 +13,11 @@ interface MediaCaptureProps {
   isSecret: boolean;
 }
 
-// Set PNG Frame Size  9:16 Aspect Ratio)
-const frameWidth = 300;
-const frameHeight = 533;
-
-// Reduce Camera Preview to Fit Inside PNG Frame
-const cameraWidth = 300;  // Smaller than frameWidth
-const cameraHeight = 533; // Maintain 9:16 ratio
+// Set 9:16 Aspect Ratio)
+const frameWidth = 450;
+const frameHeight = 800;
+const cameraWidth = 450;
+const cameraHeight = 800;
 
 // modify on mobile differently
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
