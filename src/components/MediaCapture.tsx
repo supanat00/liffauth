@@ -37,6 +37,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [artistName, setArtistName] = useState<string>('');
   const [videoType, setVideoType] = useState<string>('');
   const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
@@ -122,9 +123,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     const videoWidth = previewWidth * videoScale
     const videoHeight = previewHeight * videoScale
   
-    // Set Camera Preview Position Center-Bottom
+    // Set Camera Preview Position Center-Bottomcrypto-js
     const xOffset = (canvas.width - videoWidth) / 2;
-    const yOffset = (canvas.height - videoHeight) - 10;
+    const yOffset = (canvas.height - videoHeight) - 20;
   
     // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');
@@ -293,6 +294,11 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
+
+      // Stop recording after 6 seconds automatically
+      recordingTimeoutRef.current = setTimeout(() => {
+        stopRecording();
+      }, 6000);
     } catch (error) {
       console.error('Error starting media recorder:', error);
       alert('Recording is not supported on this browser.');
@@ -304,6 +310,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsTakeMedia(false);
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
     }
   };
 
@@ -383,7 +392,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
 
         {isTakeMedia && <>
           <video
-            ref={videoRef} autoPlay playsInline muted
+            ref={videoRef} autoPlay muted
             width={cameraWidth} height={cameraHeight}
             style={{ position: 'absolute', zIndex: -1, visibility: 'hidden'}}
           />
