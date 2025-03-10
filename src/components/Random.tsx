@@ -1,83 +1,96 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MediaCapture from './MediaCapture';
 
-const normalFrames = Array.from({ length: 75 }, (_, i) => `/frame/png-seq/got-normal/Comp 2_${String(i).padStart(5, '0')}.png`);
-const secretFrames = Array.from({ length: 74 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
+const normalFrames = Array.from({ length: 90 }, (_, i) => `/frame/png-seq/got-standard/Comp 2_${String(i).padStart(5, '0')}.png`);
+const secretFrames = Array.from({ length: 90 }, (_, i) => `/frame/png-seq/got-secret/Comp 1_${String(i).padStart(5, '0')}.png`);
 const congratsFrames = Array.from({ length: 20 }, (_, i) => `/frame/png-seq/congrat-secret/congrat${String(i).padStart(4, '0')}.png`);
 
 const Random = () => {
   const [frames, setFrames] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showCongrats, setShowCongrats] = useState(false);
   const [showMediaCapture, setShowMediaCapture] = useState(false);
-  const [isSecret] = useState(Math.random() < 0.3); // Randomly choose normal (70%) or secret (30%)
+  const [isSecret] = useState(Math.random() < 0.2); // 20% secret, 80% normal
   const [preloadedImages, setPreloadedImages] = useState<HTMLImageElement[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false); // Ensures all images are preloaded
+  const [isLoaded, setIsLoaded] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const selectedFrames = !isSecret ? normalFrames : secretFrames;
+    const selectedFrames = isSecret ? secretFrames : normalFrames;
     setFrames(selectedFrames);
-    setIsLoaded(false); // Reset loading state
+    setIsLoaded(false);
 
-    // Show loading message while images are preloading
-    Promise.all(
-      selectedFrames.map((src) => {
+    // Preload selected frames
+    Promise.all(selectedFrames.map((src) => {
+      return new Promise<HTMLImageElement>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => resolve(img);
+      });
+    })).then((loadedImages) => {
+      setPreloadedImages(loadedImages);
+      setIsLoaded(true);
+    });
+  }, [isSecret]);
+
+  useEffect(() => {
+    if (!isLoaded || frames.length === 0) return;
+
+    let frameCount = frames.length;
+    let speedCurve = frames.map((_, index) => {
+      let mid = Math.floor(frameCount / 2);
+      let distanceToMid = Math.abs(index - mid);
+      return distanceToMid < mid * 0.5 ? 40 : 100; // Middle frames are faster
+    });
+
+    let currentFrame = 0;
+    
+    const playFrames = () => {
+      setCurrentIndex(currentFrame);
+      currentFrame++;
+
+      if (currentFrame < frameCount) {
+        let nextSpeed = speedCurve[currentFrame];
+        intervalRef.current = setTimeout(playFrames, nextSpeed);
+      } else {
+        handleSpinFinish();
+      }
+    };
+
+    playFrames();
+
+    return () => {
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+    };
+  }, [frames, isLoaded]);
+
+  const handleSpinFinish = () => {
+    if (isSecret) {
+      setFrames(congratsFrames);
+      setCurrentIndex(0);
+      setIsLoaded(false);
+
+      // Preload congrats animation frames
+      Promise.all(congratsFrames.map((src) => {
         return new Promise<HTMLImageElement>((resolve) => {
           const img = new Image();
           img.src = src;
           img.onload = () => resolve(img);
         });
-      })
-    ).then((loadedImages) => {
-      setPreloadedImages(loadedImages);
-      setIsLoaded(true); // Mark images as fully loaded
-    });
-  }, [isSecret]);
+      })).then((loadedImages) => {
+        setPreloadedImages(loadedImages);
+        setIsLoaded(true);
 
-  useEffect(() => {
-    if (isLoaded && frames.length > 0) {
-      const timeout = setTimeout(() => {
-        if (isSecret) {
-          setShowCongrats(true);
-          setFrames(congratsFrames);
-          setCurrentIndex(0);
-          setIsLoaded(false);
-
-          // Preload congratulation frames
-          Promise.all(
-            congratsFrames.map((src) => {
-              return new Promise<HTMLImageElement>((resolve) => {
-                const img = new Image();
-                img.src = src;
-                img.onload = () => resolve(img);
-              });
-            })
-          ).then((loadedImages) => {
-            setPreloadedImages(loadedImages);
-            setIsLoaded(true);
-          });
-
-          setTimeout(() => {
-            setShowMediaCapture(true);
-          }, congratsFrames.length * 100);
-        } else {
+        // Show MediaCapture after congrats animation
+        setTimeout(() => {
           setShowMediaCapture(true);
-        }
-      }, frames.length * 100);
-      return () => clearTimeout(timeout);
+        }, congratsFrames.length * 100);
+      });
+    } else {
+      setShowMediaCapture(true);
     }
-  }, [isLoaded, frames, isSecret]);
-
-  useEffect(() => {
-    if (!isLoaded) return; // Ensure animation starts only when images are loaded
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % frames.length);
-    }, 100);
-    return () => clearInterval(interval);
-  }, [frames, isLoaded]);
+  };
 
   return (
     <div className='flex justify-center items-center h-screen relative'>
@@ -88,9 +101,9 @@ const Random = () => {
         </div>
       )}
       
-      {isLoaded && frames[currentIndex] && !showMediaCapture && (
+      {isLoaded && !showMediaCapture && (
         <img
-          src={preloadedImages[currentIndex].src}
+          src={preloadedImages[currentIndex]?.src}
           alt='Animation Frame'
           width={600}
           height={600}

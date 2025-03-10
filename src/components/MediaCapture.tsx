@@ -44,6 +44,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
   const [isBgLoaded, setIsBgLoaded] = useState(false);
   const { params } = useRouteParams();
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
 
   useEffect(() => {
     loadResources();
@@ -125,7 +126,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   
     // Set Camera Preview Position Center-Bottom
     const xOffset = (canvas.width - videoWidth) / 2;
-    const yOffset = (canvas.height - videoHeight) - 10;
+    const yOffset = (canvas.height - videoHeight) - 20;
   
     // **CREATE TEMP CANVAS FOR BODYPIX PROCESSING**
     const tempCanvas = document.createElement('canvas');
@@ -186,19 +187,27 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     // **RESET TRANSFORMATION**
     ctx.restore();
   
+    // Set frame index based on time to ensure accurate playback
+    const totalFrames = 30; // Total frames for 0.99 sec at 30fps
+    const currentTime = (Date.now() % 990) / 990; // Normalized 0-1 time
+    frameIndex.current = Math.floor(currentTime * totalFrames) % pngFrames.length;
     // **DRAW PNG FRAME OVERLAY**
     ctx.globalCompositeOperation = 'source-over';
     const frame = pngFrames[frameIndex.current];
     if (frame) {
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
     }
-  
     frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
 
     // **DRAW STATIC BACKGROUND FIRST**
     if (customBgImage && isBgLoaded) {
       ctx.globalCompositeOperation = 'destination-over'; // Ensure normal drawing mode
       ctx.drawImage(customBgImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    // Set canvas as ready (only set true once the first frame is drawn)
+    if (!isCanvasReady) {
+      setIsCanvasReady(true);
     }
   };
   
@@ -354,7 +363,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   return (
     <div>
       <>
-        {(!isProcessingReady || !bodyPixModel || !pngFrames) && (
+        {(!isProcessingReady || !bodyPixModel || !pngFrames || !isCanvasReady) && (
           <div className='flex flex-col items-center justify-center prepare-frame'>
             <span className='text-lg font-bold text-white'>🎥 Preparing frame...</span>
             <div className='w-12 h-12 border-4 border-white-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
@@ -385,7 +394,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           )}
         </div>
       </>
-      {(isProcessingReady && bodyPixModel && pngFrames) && <>
+      {(isProcessingReady && bodyPixModel && pngFrames && isCanvasReady) && <>
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4 place-items-center control-panel'>
         <div className='py-3 items-center justify-center col-css'>
