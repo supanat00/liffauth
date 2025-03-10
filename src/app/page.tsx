@@ -40,42 +40,44 @@ const AppContent = () => {
         accessId: accessId
       };
 
+      console.log(newParams);
       setParams(newParams);
       
-      // Ensure setParams has been applied before calling setUser
-      setTimeout(() => setUser(newParams), 0);
+      // // Ensure setParams has been applied before calling setUser
+      // setTimeout(() => setUser(newParams), 0);
     }
   }, [userId, consent, age, artistId, setParams]);
 
   const decrypt = (encryptedData: string) => {
-    const key = process.env.NEXT_PUBLIC_key || '';
-    const ivString = process.env.NEXT_PUBLIC_iv || '';
-    const iv = CryptoJS.enc.Utf8.parse(ivString);
-    const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
-    const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
-    return bytes.toString(CryptoJS.enc.Utf8);
+    // const key = process.env.NEXT_PUBLIC_key || '';
+    // const ivString = process.env.NEXT_PUBLIC_iv || '';
+    // const iv = CryptoJS.enc.Utf8.parse(ivString);
+    // const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
+    // const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
+    // return bytes.toString(CryptoJS.enc.Utf8);
+    return '';
   };
 
-  const setUser = async (userParams: any) => {
-    try {  
-      const response = await fetch('/api/userAccess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userParams.userId,
-          accessId: accessId, // Send generated UUID
-          saveAndShare: 0,
-          artistId: userParams.artistId,
-          takePhoto: 0,
-          takeVideo: 0
-        })
-      });
+  // const setUser = async (userParams: any) => {
+  //   try {  
+  //     const response = await fetch('/api/userAccess', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         userId: userParams.userId,
+  //         accessId: accessId, // Send generated UUID
+  //         saveAndShare: 0,
+  //         artistId: userParams.artistId,
+  //         takePhoto: 0,
+  //         takeVideo: 0
+  //       })
+  //     });
   
-      const data = await response.json();
-    } catch (error) {
-      console.error('Error saving user:', error);
-    }
-  };
+  //     const data = await response.json();
+  //   } catch (error) {
+  //     console.error('Error saving user:', error);
+  //   }
+  // };
 
   return (
     <section className='relative flex flex-col items-center justify-center bg-backgroundImg'>

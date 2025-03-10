@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 /** @type {import('next').NextConfig} */
 
@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true, // Disables ESLint errors during `next build`
   },
-  distDir: "out",   // Stores static files in "out" directory
+  distDir: 'out',   // Stores static files in 'out' directory
+  output: 'export', // This enables static export
   images: {
     unoptimized: true,  // Disables image optimization for static export
   },
@@ -14,4 +15,4 @@ const nextConfig: NextConfig = {
   /* config options here */
 };
 
-export default nextConfig;
+module.exports = nextConfig;

@@ -44,6 +44,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [isBgLoaded, setIsBgLoaded] = useState(false);
   const { params } = useRouteParams();
   const accessId = params?.accessId || '';
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
 
   useEffect(() => {
     loadResources();
@@ -51,8 +52,20 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setArtistName(name || 'N/A');
   }, []);
 
+  const videoConstraints = {
+    width: { ideal: 600 }, // 3:4 aspect ratio
+    height: { ideal: 800 }, // 3:4 aspect ratio
+    frameRate: { ideal: 30, max: 30 }, 
+    facingMode: 'user'
+  };  
+
   const loadResources = async () => {
-    const model = await bodyPix.load();
+    const model = await bodyPix.load({
+      architecture: 'MobileNetV1',
+      outputStride: 16,
+      multiplier: 0.50, // Lower multiplier for faster inference
+      quantBytes: 2 // Reduces model size, improving load speed
+    });
     setBodyPixModel(model);
 
     // Load custom background image
@@ -67,14 +80,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   
     const video = videoRef.current;
     if (video) {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: isMobile ? 720 : 1080 }, // Reduce width for mobile to avoid distortion
-          height: { ideal: isMobile ? 1280 : 1920 }, // Keep 9:16 aspect ratio
-          facingMode: 'user',
-        },
-      });
-  
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
       video.srcObject = stream;
       video.onloadedmetadata = async () => {
         video.play();
@@ -84,23 +90,24 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   };
 
   useEffect(() => {
-    const frameNormal = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistNormalFrame || [];
-    const frameSecret = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artisSecretFrame || [];
     const loadImages = async () => {
-      const images = await Promise.all(
-        (isSecret ? frameSecret : frameNormal).map((src) => {
-          return new Promise<HTMLImageElement>((resolve) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => resolve(img);
-          });
-        })
-      );
+      const frameNormal = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistNormalFrame || [];
+      const frameSecret = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artisSecretFrame || [];
+      const frames = isSecret ? frameSecret : frameNormal;
+  
+      const images = await Promise.all(frames.map((src) => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => resolve(img);
+          img.onerror = reject; // Handle errors properly
+        });
+      }));
       setPngFrames(images);
     };
     loadImages();
-  }, []);
-
+  }, [isSecret, params?.artistId]);
+  
   let lastTime = 0;
 
   const replaceBackground = async () => {
@@ -114,14 +121,17 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     const now = performance.now();
     if (now - lastTime < 33) return;
     lastTime = now;
-  
-    // **SET CAMERA PREVIEW SIZE**
-    const previewScale = isMobile ? 2 : 1; // Slightly larger for mobile
-    const previewWidth = canvas.width * previewScale;
-    const previewHeight = canvas.height;
-    const videoScale = isMobile ? 0.5 : 1;
-    const videoWidth = previewWidth * videoScale
-    const videoHeight = previewHeight * videoScale
+
+    const videoAspectRatio = 3 / 4; // Camera is 3:4
+
+    let videoWidth = video.videoWidth;
+    let videoHeight = video.videoHeight;
+
+    // If height exceeds frame height, adjust width instead
+    if (videoHeight > canvas.height) {
+      videoHeight = canvas.height;
+      videoWidth = videoHeight * videoAspectRatio;
+    }
   
     // Set Camera Preview Position Center-Bottomcrypto-js
     const xOffset = (canvas.width - videoWidth) / 2;
@@ -143,8 +153,8 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       segmentationThreshold: 0.7,
       flipHorizontal: false,
       scoreThreshold: 0.2,
-      maxDetections: 2,
-    });    
+      maxDetections: 1,
+    });
 
     // If no person is detected, return without updating the canvas
     if (!segmentation || segmentation.allPoses.length === 0) {
@@ -195,22 +205,37 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     const frame = pngFrames[frameIndex.current];
     if (frame) {
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-    }  
-    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
+    }
 
     // **DRAW STATIC BACKGROUND FIRST**
     if (customBgImage && isBgLoaded) {
       ctx.globalCompositeOperation = 'destination-over'; // Ensure normal drawing mode
       ctx.drawImage(customBgImage, 0, 0, canvas.width, canvas.height);
     }
+
+    // Set canvas as ready (only set true once the first frame is drawn)
+    if (!isCanvasReady) {
+      setIsCanvasReady(true);
+    }
+
+    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
   };
   
   useEffect(() => {
     if (isProcessingReady && bodyPixModel) {
-      const interval = setInterval(replaceBackground, 33);
-      return () => clearInterval(interval);
+      let lastFrameTime = 0;
+      const fps = 15; // Limit FPS to 15  
+      const renderLoop = () => {
+        const now = performance.now();
+        if (now - lastFrameTime >= 1000 / fps) { // Process at 15 FPS
+          replaceBackground();
+          lastFrameTime = now;
+        }
+        requestAnimationFrame(renderLoop);
+      };  
+      requestAnimationFrame(renderLoop);
     }
-  }, [isProcessingReady, bodyPixModel, pngFrames]);
+  }, [isProcessingReady, bodyPixModel, pngFrames]);  
 
   // Capture Photo with Correct Camera & Frame Size
   const capturePhoto = () => {
@@ -298,7 +323,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       // Stop recording after 6 seconds automatically
       recordingTimeoutRef.current = setTimeout(() => {
         stopRecording();
-      }, 6000);
+      }, 7000);
     } catch (error) {
       console.error('Error starting media recorder:', error);
       alert('Recording is not supported on this browser.');
@@ -349,13 +374,13 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const handleTypeClick = () => {
     if (type === 'photo' || type === null) {
       capturePhoto();
-      updateTransaction(accessId, 'takePhoto');
+      // updateTransaction(accessId, 'takePhoto');
     } else {
       if(isRecording) {
         stopRecording();
       } else {
         startRecording();
-        updateTransaction(accessId, 'takeVideo');
+        // updateTransaction(accessId, 'takeVideo');
       }
     }
   };
@@ -364,26 +389,26 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setType(!value ? 'video' : 'photo');
   };
 
-  const updateTransaction = async (accessId: string, field: string) => {
-    try {
-      const response = await fetch('/api/updateTransaction', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessId, field })
-      });
+  // const updateTransaction = async (accessId: string, field: string) => {
+  //   try {
+  //     const response = await fetch('/api/updateTransaction', { 
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ accessId, field })
+  //     });
   
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+  //     const data = await response.json();
+  //     if (!response.ok) throw new Error(data.error);
   
-    } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-    }
-  };
+  //   } catch (error) {
+  //     console.error(`Error updating ${field}:`, error);
+  //   }
+  // };
 
   return (
     <div>
       <>
-        {(!isProcessingReady || !bodyPixModel || !pngFrames) && (
+        {(!isProcessingReady || !bodyPixModel || !pngFrames || !isCanvasReady) && (
           <div className='flex flex-col items-center justify-center prepare-frame'>
             <span className='text-lg font-bold text-white'>🎥 Preparing frame...</span>
             <div className='w-12 h-12 border-4 border-white-300 border-t-blue-500 rounded-full animate-spin mt-2'></div>
@@ -393,11 +418,11 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
         {isTakeMedia && <>
           <video
             ref={videoRef} autoPlay muted
-            width={cameraWidth} height={cameraHeight}
+            width={600} height={800} // 3:4 aspect ratio
             style={{ position: 'absolute', zIndex: -1, visibility: 'hidden'}}
           />
           <canvas
-            ref={canvasRef} width={cameraWidth} height={cameraHeight}
+            ref={canvasRef} width={450} height={800} // Keep 9:16 for the frame
             id='canvas'
             style={{ aspectRatio: '9 / 16', marginLeft: 'auto', marginRight: 'auto' }}
           />
@@ -414,7 +439,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           )}
         </div>
       </>
-      {(isProcessingReady && bodyPixModel && pngFrames) && <>
+      {(isProcessingReady && bodyPixModel && pngFrames && isCanvasReady) && <>
       {/* Control Panel */}
       <div className='grid grid-cols-3 gap-4 place-items-center control-panel'>
         <div className='py-3 items-center justify-center col-css'>

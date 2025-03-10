@@ -45,7 +45,7 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
       a.download = fileName;
       a.click();
 
-      updateTransaction(params ? params.accessId : '', 'saveAndShare', 1);
+      // updateTransaction(params ? params.accessId : '', 'saveAndShare', 1);
       
       // Check if Web Share API supports file sharing
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -93,21 +93,21 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
     }
   };
 
-  const updateTransaction = async (accessId: string, field: string, value: number) => {
-    try {
-      const response = await fetch('/api/updateTransaction', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessId, field, value })
-      });
+  // const updateTransaction = async (accessId: string, field: string, value: number) => {
+  //   try {
+  //     const response = await fetch('/api/updateTransaction', { 
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ accessId, field, value })
+  //     });
   
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+  //     const data = await response.json();
+  //     if (!response.ok) throw new Error(data.error);
   
-    } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-    }
-  };
+  //   } catch (error) {
+  //     console.error(`Error updating ${field}:`, error);
+  //   }
+  // };
 
   return (
     <>
