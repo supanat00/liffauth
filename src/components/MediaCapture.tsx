@@ -39,6 +39,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [artistName, setArtistName] = useState<string>('');
   const [videoType, setVideoType] = useState<string>('');
   const [customBgImage, setCustomBgImage] = useState<HTMLImageElement | null>(null);
@@ -300,6 +301,11 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
+
+      // Stop recording after 6 seconds automatically
+      recordingTimeoutRef.current = setTimeout(() => {
+        stopRecording();
+      }, 7000);
     } catch (error) {
       console.error('Error starting media recorder:', error);
       alert('Recording is not supported on this browser.');
@@ -311,6 +317,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsTakeMedia(false);
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+      }
     }
   };
 
@@ -425,7 +434,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
           }
           {(imageUrl || videoUrl) && !isTakeMedia && (
             <>
-              <a href='https://planetofgame.com/ar/20'>
+              <a href='https://planetofgame.com/ar/22'>
                 <Icon type='playAgain' />
               </a>
               <p className='text-xs mt-1 text-white'>Start Again</p>
