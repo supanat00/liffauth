@@ -53,39 +53,47 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   }, []);
 
   const videoConstraints = {
-    width: { ideal: 600 }, // 3:4 aspect ratio
-    height: { ideal: 800 }, // 3:4 aspect ratio
-    frameRate: { ideal: 30, max: 30 }, 
+    width: { ideal: isMobile ? 480 : 600 }, // Lower width for mobile
+    height: { ideal: isMobile ? 640 : 800 }, // Keep 3:4 aspect ratio
+    frameRate: { ideal: 20, max: 25 }, // Reduce FPS for lower processing
     facingMode: 'user'
-  };  
-
+  };
+  
   const loadResources = async () => {
+    await Promise.all([loadBodyPixModel(), loadCameraStream()]); // Load model & camera at the same time
+  };
+  
+  const loadBodyPixModel = async () => {
     const model = await bodyPix.load({
       architecture: 'MobileNetV1',
-      outputStride: 16,
-      multiplier: 0.50, // Lower multiplier for faster inference
-      quantBytes: 2 // Reduces model size, improving load speed
+      outputStride: 16, 
+      multiplier: 0.50, 
+      quantBytes: 2 // Reduces model size for faster loading
     });
     setBodyPixModel(model);
-
-    // Load custom background image
-    const customBg = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistBgFrame || '';
-    const bgImage = new Image();
-    bgImage.src = customBg; // Replace with actual URL
-    bgImage.onload = () => {
-      // Save the background in state
-      setCustomBgImage(bgImage);
-      setIsBgLoaded(true);
-    };
+  };
   
-    const video = videoRef.current;
-    if (video) {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+  const loadCameraStream = async () => {
+    try {
+      const video = videoRef.current;
+      if (!video) return;
+  
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: isMobile ? 480 : 600 }, // Adjust based on device
+          height: { ideal: isMobile ? 640 : 800 }, // Maintain 3:4 aspect ratio
+          frameRate: { ideal: 20, max: 25 }, // Limit FPS for faster processing
+          facingMode: 'user'
+        }
+      });
+  
       video.srcObject = stream;
-      video.onloadedmetadata = async () => {
+      video.onloadedmetadata = () => {
         video.play();
         setIsProcessingReady(true);
       };
+    } catch (error) {
+      console.error("Error accessing camera:", error);
     }
   };
 
@@ -107,6 +115,21 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     };
     loadImages();
   }, [isSecret, params?.artistId]);
+
+  useEffect(() => {
+    const loadBgImages = async () => {
+      // Load custom background image
+      const customBg = artistsFrame.find(artist => artist.artistId === params?.artistId)?.artistBgFrame || '';
+      const bgImage = new Image();
+      bgImage.src = customBg; // Replace with actual URL
+      bgImage.onload = () => {
+        // Save the background in state
+        setCustomBgImage(bgImage);
+        setIsBgLoaded(true);
+      };
+    };
+    loadBgImages();
+  }, [params?.artistId]);
   
   let lastTime = 0;
 
@@ -145,7 +168,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (!tempCtx) return;
   
     // **DRAW VIDEO TO TEMP CANVAS**
-    tempCtx.drawImage(video, 0, 0, videoWidth, videoHeight);
+    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
   
     // **BODY SEGMENTATION**
     const segmentation = await bodyPixModel.segmentPerson(tempCanvas, {
@@ -206,6 +229,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (frame) {
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
     }
+    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
 
     // **DRAW STATIC BACKGROUND FIRST**
     if (customBgImage && isBgLoaded) {
@@ -217,17 +241,15 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (!isCanvasReady) {
       setIsCanvasReady(true);
     }
-
-    frameIndex.current = (frameIndex.current + 1) % pngFrames.length;
   };
   
   useEffect(() => {
     if (isProcessingReady && bodyPixModel) {
       let lastFrameTime = 0;
-      const fps = 15; // Limit FPS to 15  
+      const fps = 15; // Reduce FPS to 15 for efficiency
       const renderLoop = () => {
         const now = performance.now();
-        if (now - lastFrameTime >= 1000 / fps) { // Process at 15 FPS
+        if (now - lastFrameTime >= 1000 / fps) { 
           replaceBackground();
           lastFrameTime = now;
         }
@@ -236,7 +258,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       requestAnimationFrame(renderLoop);
     }
   }, [isProcessingReady, bodyPixModel, pngFrames]);  
-
+  
   // Capture Photo with Correct Camera & Frame Size
   const capturePhoto = () => {
     if (!canvasRef.current) return;
