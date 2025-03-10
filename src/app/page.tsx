@@ -5,7 +5,10 @@ export const dynamic = 'force-static';  // Ensure static export
 import React, { useEffect, Suspense } from 'react';
 import Random from '@/components/Random';
 
-import * as CryptoJS from 'crypto-js';
+// import * as CryptoJS from 'crypto-js';
+import AES from 'crypto-js/aes';
+import Utf8 from 'crypto-js/enc-utf8';
+
 import { useRouteParams } from '@/context/ParamsContext';
 import { useSearchParams } from 'next/navigation';
 
@@ -48,15 +51,31 @@ const AppContent = () => {
     }
   }, [userId, consent, age, artistId, setParams]);
 
+  // const decrypt = (encryptedData: string) => {
+  //   if (typeof window === 'undefined') return ''; // Prevent SSR issues
+  //   const key = process.env.NEXT_PUBLIC_key || '';
+  //   const ivString = process.env.NEXT_PUBLIC_iv || '';
+  //   const iv = CryptoJS.enc.Utf8.parse(ivString);
+  //   const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
+  //   const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
+  //   return bytes.toString(CryptoJS.enc.Utf8);
+  //   // return '';
+  // };
+
   const decrypt = (encryptedData: string) => {
-    // const key = process.env.NEXT_PUBLIC_key || '';
-    // const ivString = process.env.NEXT_PUBLIC_iv || '';
-    // const iv = CryptoJS.enc.Utf8.parse(ivString);
-    // const formattedData = encryptedData.replaceAll(/ /g, '+'); // Fix '+' issue
-    // const bytes = CryptoJS.AES.decrypt(formattedData, key, { iv: iv, mode: CryptoJS.mode.CBC });
-    // return bytes.toString(CryptoJS.enc.Utf8);
-    return '';
-  };
+    if (typeof window === 'undefined') return ''; // Prevent SSR execution
+  
+    const key = process.env.NEXT_PUBLIC_key || '';
+    const ivString = process.env.NEXT_PUBLIC_iv || '';
+  
+    if (!key || !ivString) return ''; // Prevent decryption errors
+  
+    const iv = Utf8.parse(ivString);
+    const formattedData = encryptedData.replace(/ /g, '+'); // Fix '+' issue
+    const bytes = AES.decrypt(formattedData, key, { iv: iv });
+  
+    return bytes.toString(Utf8);
+  };  
 
   // const setUser = async (userParams: any) => {
   //   try {  
