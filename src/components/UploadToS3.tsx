@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { S3 } from 'aws-sdk';
 import Icon from './Icon';
 import { useRouteParams } from '@/context/ParamsContext';
+import artists from '../../public/artist.json';
 
 const s3 = new S3({
   region: process.env.NEXT_PUBLIC_AWS_REGION || '',
@@ -14,12 +15,11 @@ const s3 = new S3({
 
 interface MediaProps {
   downloadMedia: string | null;
-  artistName: string;
 }
 
 const isAndroid = /Android/i.test(navigator.userAgent);
 
-export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) => {  
+export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia }) => {  
   const [fileUploadStatus, setFileUploadStatus] = useState<boolean>(false);
   const { params } = useRouteParams();
 
@@ -31,6 +31,7 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
       const blob = await response.blob();
 
       // Determine file extension
+      const artistName = artists.find(artist => artist.artistId === params?.artistId)?.artistName;
       const fileExtension = blob.type.includes('image') ? 'png' : 'mp4';
       const mimeType = blob.type.includes('image') ? 'image/png' : 'video/mp4';
       const fileName = `${artistName}-download.${fileExtension}`;
@@ -53,13 +54,10 @@ export const UploadToS3: React.FC<MediaProps> = ({ downloadMedia, artistName }) 
         if(isAndroid) {
           shareViaIntent(fileUrl);
         }
-        console.log("File shared successfully!");
       } else {
-        alert("Sharing is not supported on this browser.");
+        alert('Sharing is not supported on this browser.');
       }
-    } catch (error) {
-      console.error("Error sharing file:", error);
-    }
+    } catch (error) {}
   };
 
   const shareViaIntent = (fileUrl: string) => {
