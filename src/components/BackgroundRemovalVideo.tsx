@@ -2,26 +2,27 @@ import { useRef, useEffect } from 'react';
 import * as bodyPix from '@tensorflow-models/body-pix';
 import '@tensorflow/tfjs';
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 const BackgroundRemovalVideo = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const startCamera = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' }, // Let device set optimal native ratio
-      });
-    
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-    
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current && canvasRef.current) {
-            canvasRef.current.width = videoRef.current.videoWidth;
-            canvasRef.current.height = videoRef.current.videoHeight;
-            videoRef.current.play();
-          }
+      const video = videoRef.current;
+      if (video) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: isMobile ? 720 : 1080 }, // Reduce width for mobile to avoid distortion
+            height: { ideal: isMobile ? 1280 : 1920 }, // Keep 9:16 aspect ratio
+            facingMode: 'user',
+          },
+        });    
+        video.srcObject = stream;
+        video.onloadedmetadata = async () => {
+          video.play();
         };
       }
     };
