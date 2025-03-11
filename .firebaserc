@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "nestle-project-61016"
-  }
+    "default": "nestle-project-a1544",
+    "dev": "nestle-project-a1544"
+  },
+  "targets": {},
+  "etags": {}
 }
