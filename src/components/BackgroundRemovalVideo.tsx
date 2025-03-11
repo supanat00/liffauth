@@ -8,31 +8,24 @@ const BackgroundRemovalVideo = () => {
 
   useEffect(() => {
     const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 720, height: 1280, facingMode: 'user' },
-        });
-
-        if (videoRef.current) {
-          // Stop any previous stream to prevent multiple calls
-          if (videoRef.current.srcObject) {
-            const oldStream = videoRef.current.srcObject as MediaStream;
-            oldStream.getTracks().forEach((track) => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }, // Let device set optimal native ratio
+      });
+    
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+    
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current && canvasRef.current) {
+            canvasRef.current.width = videoRef.current.videoWidth;
+            canvasRef.current.height = videoRef.current.videoHeight;
+            videoRef.current.play();
           }
-
-          videoRef.current.srcObject = stream;
-          videoRef.current.muted = true; // Fix autoplay restrictions
-
-          // Fix: Wait for metadata to load before playing
-          videoRef.current.onloadedmetadata = async () => {
-            try {
-              await videoRef.current?.play();
-            } catch (error) {}
-          };
-        }
-      } catch (error) {}
+        };
+      }
     };
-
+    
     const removeBackground = async () => {
       const net = await bodyPix.load();
       const video = videoRef.current;
