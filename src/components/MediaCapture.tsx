@@ -68,9 +68,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setIsRecording(true);
     const stream = await componentToStream(componentRef.current);
 
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-      ? "video/mp4"
-      : "video/webm";
+    const mimeType = MediaRecorder.isTypeSupported('video/mp4')
+      ? 'video/mp4'
+      : 'video/webm';
 
     const recorder = new MediaRecorder(stream, { mimeType });
     const chunks: Blob[] = [];
@@ -88,7 +88,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     setMediaRecorder(recorder);
 
     recordingTimeoutRef.current = setTimeout(() => {
-      if (recorder.state === "recording") {
+      if (recorder.state === 'recording') {
         recorder.stop();
         setIsRecording(false);
       }
@@ -96,7 +96,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       setMediaRecorder(null);
       setIsRecording(false);
@@ -109,12 +109,12 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   };
 
   const componentToStream = async (element: HTMLElement) => {
-    const canvas = document.createElement("canvas");
+    const canvas = document.createElement('canvas');
     canvas.width = element.clientWidth * 0.8;
     canvas.height = element.clientHeight * 0.8;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     
-    if (!ctx) throw new Error("Canvas context not available.");
+    if (!ctx) throw new Error('Canvas context not available.');
   
     const stream = canvas.captureStream(30);
     let isCapturing = true;

@@ -29,10 +29,9 @@ const ArtistFrame: React.FC<ArtistFrameProps> = ({ artistFrame = [] }) => {
   return (
     <img
       src={artistFrame[currentFrame]}
-      alt="artist-sequence"
-      width={300}
-      height={300}
+      alt='artist-sequence'
       draggable={false}
+      className='artist-frame'
     />
   );
 };

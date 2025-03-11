@@ -54,6 +54,11 @@ video {
   margin-top: 100%;
 }
 
+.artist-frame {
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
 @media (max-width: 768px) {
   #canvas {
     width: 100vw;
