@@ -20,7 +20,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [artistFrame, setArtistFrame] = useState<string>('');
+  const [artistFrame, setArtistFrame] = useState<string[]>([]);
   const [customBgImage, setCustomBgImage] = useState<string>('');
   const [isRecording, setIsRecording] = useState(false);
   const [isTakeMedia, setIsTakeMedia] = useState(true);
@@ -30,7 +30,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     if (params?.artistId) {
       let artistData = artistsFrame.find(artist => artist.artistId === params.artistId);
       if (artistData) {
-        setArtistFrame(isSecret ? artistData.artistSecretFrameGif : artistData.artistStandardFrameGif);
+        setArtistFrame(isSecret ? artistData.artistSecretFrame : artistData.artistStandardFrame);
         setCustomBgImage(artistData.artistBgFrame);
       }
     }
@@ -50,55 +50,51 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
 
   const capturePhoto = async () => {
     if (componentRef.current) {
-      const canvas = await html2canvas(componentRef.current);
+      const canvas = await html2canvas(componentRef.current, {
+        ignoreElements: (element) => element.tagName === 'VIDEO' || element.classList.contains('hidden'),
+        useCORS: true,
+      });
       const image = canvas.toDataURL('image/png');
       setImageSrc(image);
       setIsTakeMedia(false);
-    }
-  }
+    };
+  };
 
   const startRecording = async () => {
-    if (componentRef.current) {
-      setIsRecording(true);
-      const stream = componentToStream(componentRef.current);
-
-      let mimeType = 'video/webm';
-      if (MediaRecorder.isTypeSupported('video/mp4')) {
-        mimeType = 'video/mp4';
-      } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        mimeType = 'video/webm';
-      } else {
-        return;
+    if (!componentRef.current) return;
+  
+    setIsRecording(true);
+    const stream = await componentToStream(componentRef.current);
+  
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4") 
+      ? "video/mp4" 
+      : "video/webm";
+  
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks: Blob[] = [];
+  
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
+  
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      setVideoSrc(URL.createObjectURL(blob));
+      setIsTakeMedia(false);
+      setIsRecording(false);
+    };
+  
+    recorder.start();
+    setMediaRecorder(recorder);
+  
+    setTimeout(() => {
+      if (recorder.state === "recording") {
+        recorder.stop();
+        setMediaRecorder(null);
       }
-
-      const recorder = new MediaRecorder(stream, { mimeType: mimeType });  
-      const chunks: Blob[] = [];  
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      };
-  
-      recorder.onstop = () => {
-        if (chunks.length > 0) {
-          const blob = new Blob(chunks, { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          setVideoSrc(url);
-          setIsTakeMedia(false); // Ensure preview mode activates
-        }
-      };
-  
-      recorder.start();
-      setMediaRecorder(recorder);
-
-      // Automatically stop recording after 6 seconds
-      setTimeout(() => {
-        if (recorder.state === 'recording') {
-          recorder.stop();
-          setMediaRecorder(null);
-        }
-      }, 7000);
-    }
+    }, 7000);
   };
-  
+     
   const stopRecording = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
@@ -107,27 +103,52 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     }
   };
   
-  const componentToStream = (element: HTMLElement) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+  const componentToStream = async (element: HTMLElement) => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
     canvas.width = element.clientWidth;
     canvas.height = element.clientHeight;
-    const drawFrame = async () => {
-      if (!ctx || !componentRef.current) return;
-      const screenshot = await html2canvas(componentRef.current);
+  
+    let animationFrameId: number;
+  
+    const draw = async () => {
+      if (!ctx) return;
+      const screenshot = await html2canvas(element, { 
+        useCORS: true,
+        ignoreElements: (element) => element.tagName === 'VIDEO' || element.classList.contains('hidden') // ✅ ignore videos
+      });
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(screenshot, 0, 0, canvas.width, canvas.height);
-      requestAnimationFrame(drawFrame);
+      animationFrameId = requestAnimationFrame(draw);
     };
-    drawFrame();
-    return canvas.captureStream(30); // Capture at 30 FPS
+    draw();
+  
+    // Stop drawing after 7 seconds explicitly (the recording duration)
+    setTimeout(() => {
+      cancelAnimationFrame(animationFrameId);
+    }, 7000);
+  
+    return canvas.captureStream(30);
   };
-
+  
   const retakeMedia = () => {
     setImageSrc(null);
     setVideoSrc(null);
-    setIsTakeMedia(true); // Allow capturing again
-    setIsRecording(false); // Reset recording state
-  };
+    setIsTakeMedia(true);
+    setIsRecording(false);
+  
+    // Force ArtistFrame re-mount if needed by temporarily clearing frames
+    setArtistFrame([]); 
+  
+    setTimeout(() => {
+      if (params?.artistId) {
+        const artistData = artistsFrame.find(a => a.artistId === params?.artistId);
+        if (artistData) {
+          setArtistFrame(isSecret ? artistData.artistSecretFrame : artistData.artistStandardFrame);
+        }
+      }
+    }, 100); // small delay ensures clean re-mount
+  };  
 
   const handleTypeEmit = (value: boolean) => {
     setType(!value ? 'video' : 'photo');
@@ -140,7 +161,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       <CustomBackground customBgImage={customBgImage} />
       {/* Foreground (Highest z-index) */}
       <div className='absolute inset-0 z-20 h-full w-full flex items-center justify-center pointer-events-none'>
-        <ArtistFrame artistFrame={artistFrame} />
+        <ArtistFrame artistFrame={artistFrame} isRecording={isRecording} />
       </div>
     </div>
     </>}
