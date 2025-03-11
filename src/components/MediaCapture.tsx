@@ -60,75 +60,82 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     };
   };
 
+  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const startRecording = async () => {
     if (!componentRef.current) return;
-  
+
     setIsRecording(true);
     const stream = await componentToStream(componentRef.current);
-  
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4") 
-      ? "video/mp4" 
+
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+      ? "video/mp4"
       : "video/webm";
-  
+
     const recorder = new MediaRecorder(stream, { mimeType });
     const chunks: Blob[] = [];
-  
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-  
+
+    recorder.ondataavailable = event => chunks.push(event.data);
+
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: mimeType });
       setVideoSrc(URL.createObjectURL(blob));
       setIsTakeMedia(false);
       setIsRecording(false);
     };
-  
+
     recorder.start();
     setMediaRecorder(recorder);
-  
-    setTimeout(() => {
+
+    recordingTimeoutRef.current = setTimeout(() => {
       if (recorder.state === "recording") {
         recorder.stop();
-        setMediaRecorder(null);
+        setIsRecording(false);
       }
     }, 7000);
   };
-     
+
   const stopRecording = () => {
-    if (mediaRecorder) {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
       mediaRecorder.stop();
       setMediaRecorder(null);
-      setIsRecording(false); // Ensure recording button updates
+      setIsRecording(false);
+
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
     }
   };
-  
+
   const componentToStream = async (element: HTMLElement) => {
     const canvas = document.createElement("canvas");
+    canvas.width = element.clientWidth * 0.8;
+    canvas.height = element.clientHeight * 0.8;
     const ctx = canvas.getContext("2d");
-    canvas.width = element.clientWidth;
-    canvas.height = element.clientHeight;
   
-    let animationFrameId: number;
+    if (!ctx) throw new Error("Canvas context not available.");
   
-    const draw = async () => {
-      if (!ctx) return;
-      const screenshot = await html2canvas(element, { 
+    const stream = canvas.captureStream(30);
+    const interval = 1000 / 30; // target 30fps
+  
+    const drawFrame = async () => {
+      const screenshot = await html2canvas(element, {
         useCORS: true,
-        ignoreElements: (element) => element.tagName === 'VIDEO' || element.classList.contains('hidden') // ✅ ignore videos
-      });
+        scale: 0.8, // ✅ slightly lower scale for performance
+        logging: false, // ✅ disable logging
+        ignoreElements: (el) => el.tagName === 'VIDEO' || el.classList.contains('hidden'),
+      });      
+  
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(screenshot, 0, 0, canvas.width, canvas.height);
-      animationFrameId = requestAnimationFrame(draw);
     };
-    draw();
   
-    // Stop drawing after 7 seconds explicitly (the recording duration)
-    setTimeout(() => {
-      cancelAnimationFrame(animationFrameId);
-    }, 7000);
+    const intervalId = setInterval(drawFrame, interval);
   
-    return canvas.captureStream(30);
+    setTimeout(() => clearInterval(intervalId), 7000);
+  
+    return stream;
   };
   
   const retakeMedia = () => {
