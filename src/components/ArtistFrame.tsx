@@ -2,54 +2,39 @@ import React, { useState, useEffect, useRef } from 'react';
 
 interface ArtistFrameProps {
   artistFrame?: string[];
-  isRecording?: boolean;
 }
 
-const ArtistFrame: React.FC<ArtistFrameProps> = ({ artistFrame = [], isRecording }) => {
+const ArtistFrame: React.FC<ArtistFrameProps> = ({ artistFrame = [] }) => {
   const [currentFrame, setCurrentFrame] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!artistFrame.length || isRecording) return;
-
-    artistFrame.forEach(src => {
-      const img = new Image();
-      img.src = srcWithVersion(src);
-    });
+    if (!artistFrame.length) return;
 
     let frameIndex = 0;
-    intervalCleanup.current = setInterval(() => {
+    const frameDuration = 1000 / artistFrame.length;
+
+    intervalRef.current = setInterval(() => {
       setCurrentFrame(frameIndex % artistFrame.length);
       frameIndex++;
-    }, 1000 / artistFrame.length);
+    }, frameDuration);
 
     return () => {
-      if (intervalCleanup.current) clearInterval(intervalCleanup.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [artistFrame, isRecording]);
-
-  const intervalCleanup = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (intervalCleanup.current) clearInterval(intervalCleanup.current);
-    };
-  }, []);
+  }, [artistFrame]);
 
   if (!artistFrame.length) return null;
 
   return (
-    <div>
-      <img
-        src={srcWithVersion(artistFrame[currentFrame])}
-        alt="artist-sequence"
-        width={300}
-        height={300}
-        draggable={false}
-      />
-    </div>
+    <img
+      src={artistFrame[currentFrame]}
+      alt="artist-sequence"
+      width={300}
+      height={300}
+      draggable={false}
+    />
   );
 };
 
 export default ArtistFrame;
-
-const srcWithVersion = (src: string) => `${src}?v=1`;

@@ -113,27 +113,34 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     canvas.width = element.clientWidth * 0.8;
     canvas.height = element.clientHeight * 0.8;
     const ctx = canvas.getContext("2d");
-  
+    
     if (!ctx) throw new Error("Canvas context not available.");
   
     const stream = canvas.captureStream(30);
-    const interval = 1000 / 30; // target 30fps
+    let isCapturing = true;
   
-    const drawFrame = async () => {
+    const captureFrame = async () => {
+      if (!isCapturing) return;
+  
       const screenshot = await html2canvas(element, {
+        scale: 0.8,
         useCORS: true,
-        scale: 0.8, // ✅ slightly lower scale for performance
-        logging: false, // ✅ disable logging
-        ignoreElements: (el) => el.tagName === 'VIDEO' || el.classList.contains('hidden'),
-      });      
+        logging: false,
+        ignoreElements: el => el.tagName === 'VIDEO' || el.classList.contains('hidden'),
+      });
   
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(screenshot, 0, 0, canvas.width, canvas.height);
+  
+      await new Promise(requestAnimationFrame);
     };
   
-    const intervalId = setInterval(drawFrame, interval);
+    const intervalId = setInterval(captureFrame, 1000 / 30);
   
-    setTimeout(() => clearInterval(intervalId), 7000);
+    setTimeout(() => {
+      isCapturing = false;
+      clearInterval(intervalId);
+    }, 7000);
   
     return stream;
   };
@@ -168,7 +175,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       <CustomBackground customBgImage={customBgImage} />
       {/* Foreground (Highest z-index) */}
       <div className='absolute inset-0 z-20 h-full w-full flex items-center justify-center pointer-events-none'>
-        <ArtistFrame artistFrame={artistFrame} isRecording={isRecording} />
+        <ArtistFrame artistFrame={artistFrame} />
       </div>
     </div>
     </>}
