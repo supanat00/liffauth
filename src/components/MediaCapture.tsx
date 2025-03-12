@@ -60,25 +60,46 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
     };
   };
 
-  const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const startRecording = async () => {
     if (!componentRef.current) return;
-
+  
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+  
+    const rect = componentRef.current.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+  
     setIsRecording(true);
-    const stream = await componentToStream(componentRef.current);
-
-    if (!stream) {
-      console.error("Failed to create a video stream.");
-      setIsRecording(false);
-      return;
-    }
-
+    const stream = canvas.captureStream(30); // Capture at 30fps
     const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
-    const recorder = new MediaRecorder(stream, { mimeType });
+    const recorder = new MediaRecorder(stream, { mimeType: mimeType });
+  
     const chunks: Blob[] = [];
-
-    recorder.ondataavailable = event => chunks.push(event.data);
+  
+    // Function to continuously update the canvas with captured frames
+    const drawFrame = async () => {
+      if (!componentRef.current) return;
+  
+      const tempCanvas = await html2canvas(componentRef.current, {
+        useCORS: true,
+        allowTaint: true,
+      });
+  
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+  
+      requestAnimationFrame(drawFrame);
+    };
+  
+    await drawFrame(); // Start capturing frames
+  
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
 
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: mimeType });
@@ -87,10 +108,9 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       setIsRecording(false);
     };
 
-    recorder.start();
+    recorder.start(1000);
     setMediaRecorder(recorder);
-
-    recordingTimeoutRef.current = setTimeout(() => {
+    setTimeout(() => {
       if (recorder.state === 'recording') {
         recorder.stop();
         setIsRecording(false);
@@ -103,56 +123,7 @@ const MediaCapture: React.FC<MediaCaptureProps> = ({ isSecret }) => {
       mediaRecorder.stop();
       setMediaRecorder(null);
       setIsRecording(false);
-
-      if (recordingTimeoutRef.current) {
-        clearTimeout(recordingTimeoutRef.current);
-        recordingTimeoutRef.current = null;
-      }
     }
-  };
-
-  const componentToStream = async (element: HTMLElement) => {
-    if (!HTMLCanvasElement.prototype.captureStream) {
-      alert("Recording is not supported on this device.");
-      return null;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = element.clientWidth * 0.8;
-    canvas.height = element.clientHeight * 0.8;
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      console.error('Canvas context not available.');
-      return null;
-    }
-
-    const stream = canvas.captureStream(15); // Reduce FPS for better mobile performance
-    let isCapturing = true;
-
-    const captureFrame = async () => {
-      if (!isCapturing) return;
-
-      const screenshot = await html2canvas(element, {
-        scale: 0.8,
-        useCORS: true,
-        logging: false,
-        ignoreElements: el => el.tagName === 'VIDEO' || el.classList.contains('hidden'),
-      });
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(screenshot, 0, 0, canvas.width, canvas.height);
-
-      requestAnimationFrame(captureFrame);
-    };
-
-    captureFrame();
-
-    setTimeout(() => {
-      isCapturing = false;
-    }, 7000);
-
-    return stream;
   };
   
   const retakeMedia = () => {

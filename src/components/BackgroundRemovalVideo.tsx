@@ -13,17 +13,22 @@ const BackgroundRemovalVideo = () => {
     const startCamera = async () => {
       const video = videoRef.current;
       if (video) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: isMobile ? 720 : 1080 }, // Reduce width for mobile to avoid distortion
-            height: { ideal: isMobile ? 1280 : 1920 }, // Keep 9:16 aspect ratio
-            facingMode: 'user',
-          },
-        });    
-        video.srcObject = stream;
-        video.onloadedmetadata = async () => {
-          video.play();
-        };
+        await navigator.mediaDevices.getUserMedia({
+          video: true
+        }).then((stream) => {
+          video.srcObject = stream;
+          video?.play();
+          video.onplaying = () => {
+            if (video.videoWidth && video.videoHeight) {
+              const canvas = canvasRef.current;
+              if (canvas) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+              }
+            } else {}
+          };
+        }).catch((err) => {console.log(err);
+        });
       }
     };
     
